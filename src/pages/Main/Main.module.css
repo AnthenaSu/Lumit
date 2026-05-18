@@ -1,0 +1,134 @@
+/* ── Page shell ── */
+.page {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  background: #fff;
+}
+
+/* ── Header ── */
+.header {
+  padding-top: 56px;
+  padding-bottom: 14px;
+  display: flex;
+  justify-content: center;
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 400;
+  color: #000;
+  line-height: 1;
+}
+
+/* ── Scrollable feed ── */
+.feed {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 110px; /* don't hide last post behind nav */
+}
+
+.feed::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Post card ── */
+.post {
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  margin-bottom: 4px;
+}
+
+.postHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 8px 12px 0 25px;
+}
+
+.username {
+  font-family: var(--font-body);
+  font-size: 18px;
+  font-weight: 400;
+  color: #000;
+  line-height: normal;
+}
+
+.avatar {
+  width: 48px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.photo {
+  display: block;
+  width: calc(100% - 49px); /* matches Figma: 350/402 */
+  margin: 0 auto 0 24px;
+  aspect-ratio: 350 / 420;
+  object-fit: cover;
+  border-radius: 5px;
+  box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.25);
+}
+
+.caption {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 400;
+  color: #000;
+  line-height: 1.45;
+  padding: 14px 25px 8px;
+}
+
+.meta {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 400;
+  color: rgba(0, 0, 0, 0.6);
+  padding: 0 25px;
+}
+
+/* ── Bottom nav — floats over feed ── */
+.navPill {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 320px;
+  height: 50px;
+  background: rgba(235, 235, 235, 0.35);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 50px;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 8px;
+}
+
+.navBtn {
+  background: none;
+  border: none;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #000;
+}
+
+.navBtn:active {
+  opacity: 0.5;
+}
+
+.navBtnT {
+  font-family: 'Cormorant SC', serif;
+  font-size: 25px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0 8px;
+}

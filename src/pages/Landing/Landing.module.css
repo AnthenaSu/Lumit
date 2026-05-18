@@ -1,0 +1,95 @@
+.page {
+  position: relative;
+  height: 100%;
+  background: #fff;
+  overflow: hidden;
+}
+
+.brand {
+  position: absolute;
+  top: 38.4%; /* 336/874 */
+  left: 0;
+  right: 0;
+  font-family: var(--font-display);
+  font-size: 54px;
+  font-weight: 400;
+  color: #000;
+  text-align: center;
+  line-height: normal;
+}
+
+.description {
+  position: absolute;
+  top: 47.4%; /* 414/874 */
+  left: 0;
+  right: 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.47);
+  text-align: center;
+  line-height: normal;
+}
+
+.btnPrimary {
+  position: absolute;
+  top: 71.8%; /* 628/874 */
+  left: 10.2%; /* 41/402 */
+  width: 79.6%; /* 320/402 */
+  height: 57px;
+  background: #000;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 400;
+  border-radius: 15px;
+  transition: opacity 0.15s;
+}
+
+.btnPrimary:active {
+  opacity: 0.8;
+}
+
+.btnSecondary {
+  position: absolute;
+  top: 80.2%; /* 701/874 */
+  left: 10.2%;
+  width: 79.6%;
+  height: 57px;
+  background: #fff;
+  color: #000;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 400;
+  border-radius: 15px;
+  border: 1px solid #000;
+  transition: background 0.15s;
+}
+
+.btnSecondary:active {
+  background: #f5f5f5;
+}
+
+.privacy {
+  position: absolute;
+  top: 90.4%; /* 790/874 */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 84.6%; /* 340/402 */
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 400;
+  color: #b3b3b3;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.privacyLink {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 1px;
+}
+
+.btnSecondaryBold {
+  font-weight: 600;
+}

@@ -1,0 +1,191 @@
+.page {
+  position: relative;
+  height: 100%;
+  background: #fff;
+  overflow: hidden;
+}
+
+/* ── Header (same as PhoneInput) ── */
+.brand {
+  position: absolute;
+  top: 9.15%;
+  left: 0;
+  right: 0;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 54px;
+  font-weight: 400;
+  color: #000;
+  line-height: normal;
+}
+
+.back {
+  position: absolute;
+  top: 10.07%;
+  left: 9.95%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+}
+
+.subtitle {
+  position: absolute;
+  top: 13.73%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 164px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: #808080;
+  text-align: center;
+  line-height: normal;
+}
+
+/* ── Phone field (read-only) ── */
+.phoneLabel {
+  position: absolute;
+  top: 24.7%; /* 216/874 */
+  left: 0;
+  right: 0;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 400;
+  color: #000;
+  text-align: center;
+  line-height: normal;
+}
+
+.arrowPhone {
+  position: absolute;
+  top: 30.4%; /* 266/874 */
+  left: 17.4%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.phoneValue {
+  position: absolute;
+  top: 29.4%; /* 257/874 */
+  left: 17.4%;
+  right: 0;
+  height: 41px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-right: 17.4%;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 400;
+  color: #000;
+}
+
+/* ── Code field ── */
+.codeLabel {
+  position: absolute;
+  top: 36.6%; /* 320/874 */
+  left: 0;
+  right: 0;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 400;
+  color: #000;
+  text-align: center;
+  line-height: normal;
+}
+
+.arrowCode {
+  position: absolute;
+  top: 41.9%; /* 366/874 */
+  left: 17.4%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.input {
+  position: absolute;
+  top: 40.8%; /* 357/874 */
+  left: 17.4%;
+  right: 0;
+  height: 41px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 400;
+  color: #000;
+  caret-color: #000;
+  text-align: center;
+  padding-right: 17.4%;
+  letter-spacing: 0.1em;
+}
+
+.input::placeholder {
+  color: #b3b3b3;
+  letter-spacing: 0.1em;
+}
+
+.resend {
+  position: absolute;
+  top: 44.6%; /* 390/874 */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 249px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: #d79e59;
+  text-align: center;
+  line-height: normal;
+  cursor: default;
+}
+
+.resendActive {
+  cursor: pointer;
+  color: #000;
+}
+
+.resendAction {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+/* ── Button ── */
+.btn {
+  position: absolute;
+  top: 50.3%; /* 440/874 */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 265px;
+  height: 46px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 400;
+  border-radius: 15px;
+  transition: opacity 0.15s;
+}
+
+.btnActive {
+  background: #000;
+  color: #fff;
+}
+
+.btnActive:active {
+  opacity: 0.8;
+}
+
+.btnDisabled {
+  background: #e1e1e1;
+  color: #000;
+  cursor: not-allowed;
+}

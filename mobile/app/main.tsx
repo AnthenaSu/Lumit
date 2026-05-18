@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { View, Text, ScrollView, Pressable, StyleSheet, Dimensions, Image } from 'react-native'
 import Svg, { Path, Circle } from 'react-native-svg'
+import { Link } from 'expo-router'
 
 const { width, height } = Dimensions.get('window')
 // Scale photo proportionally to screen, capped by both width and height
@@ -129,9 +130,11 @@ export default function Main() {
         <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
           <Text style={styles.navBtnTText}>T</Text>
         </Pressable>
-        <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
-          <IconSearch />
-        </Pressable>
+        <Link href="/search" asChild>
+          <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
+            <IconSearch />
+          </Pressable>
+        </Link>
         <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
           <IconUser />
         </Pressable>

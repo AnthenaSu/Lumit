@@ -1,14 +1,22 @@
 import { useState, useRef } from 'react'
-import { View, Text, ScrollView, Pressable, StyleSheet, Dimensions, Image } from 'react-native'
+import {
+  View, Text, ScrollView, Pressable, StyleSheet, Dimensions, Image,
+  Modal, TextInput, KeyboardAvoidingView, Platform, Animated,
+} from 'react-native'
 import Svg, { Path, Circle } from 'react-native-svg'
 import { Link } from 'expo-router'
 
 const { width, height } = Dimensions.get('window')
-// Scale photo proportionally to screen, capped by both width and height
-const photoWidthByWidth = width * (350 / 402)
-const photoWidthByHeight = height * (420 / 874) * (350 / 420)
-const photoWidth = Math.min(photoWidthByWidth, photoWidthByHeight)
-const photoHeight = photoWidth * (420 / 350)
+const photoWidth = width
+const photoHeight = width * (4 / 3)
+
+type Comment = { id: number; user: string; avatar: number | null; color: string | null; text: string }
+
+const MOCK_USERS = {
+  anthena: { avatar: require('../assets/images/anthena.jpg') as number, color: null },
+  ian:     { avatar: require('../assets/images/ian.jpg') as number,     color: null },
+  mia:     { avatar: null,                                               color: '#B5C4B1' },
+}
 
 const POSTS = [
   {
@@ -17,7 +25,11 @@ const POSTS = [
     location: 'Sydney',
     time: '1 hour ago',
     photo: require('../assets/images/post1.jpg'),
-    caption: 'A vase is an open, typically hollow container used for displaying flowers, storing items, or acting as decorative art, crafted from materials like glass, ceramic, metal, or wood',
+    comments: [
+      { id: 1, user: 'ian.lin', ...MOCK_USERS.ian,  text: 'So beautiful! 🌻' },
+      { id: 2, user: 'mia.c',   ...MOCK_USERS.mia,  text: 'Love the arrangement 😍' },
+      { id: 3, user: 'Anthena', ...MOCK_USERS.anthena, text: 'Thank you both 🌸' },
+    ] as Comment[],
   },
   {
     id: 2,
@@ -25,7 +37,11 @@ const POSTS = [
     location: 'Melbourne',
     time: '3 hours ago',
     photo: require('../assets/images/post2.jpg'),
-    caption: 'Stumbled upon the most incredible lamp at the Sunday market — sometimes the best finds are completely unplanned',
+    comments: [
+      { id: 1, user: 'Anthena', ...MOCK_USERS.anthena, text: 'I love this find!' },
+      { id: 2, user: 'mia.c',   ...MOCK_USERS.mia,     text: 'The Sunday market is the best 🛍️' },
+      { id: 3, user: 'ian.lin', ...MOCK_USERS.ian,     text: 'Had to grab it haha' },
+    ] as Comment[],
   },
 ]
 
@@ -66,22 +82,66 @@ function IconUser() {
   )
 }
 
+function CommentAvatar({ avatar, color, user }: { avatar: number | null; color: string | null; user: string }) {
+  if (avatar) return <Image source={avatar} style={styles.commentAvatar} />
+  return (
+    <View style={[styles.commentAvatar, styles.commentAvatarPlaceholder, { backgroundColor: color ?? '#ccc' }]}>
+      <Text style={styles.commentAvatarInitial}>{user[0].toUpperCase()}</Text>
+    </View>
+  )
+}
+
+function IconComment() {
+  return (
+    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
+      <Path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="#fff" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  )
+}
+
 export default function Main() {
   const [cats, setCats] = useState<Record<number, CatState>>({})
+  const [iconVisible, setIconVisible] = useState<Record<number, boolean>>({})
   const lastTap = useRef<Record<number, number>>({})
+  const singleTapTimer = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
+  const [openPostId, setOpenPostId] = useState<number | null>(null)
+  const [commentInput, setCommentInput] = useState('')
+  const slideAnim = useRef(new Animated.Value(height)).current
+  const fadeAnim = useRef(new Animated.Value(0)).current
+
+  const openComment = (postId: number) => {
+    setOpenPostId(postId)
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+    ]).start()
+  }
+
+  const closeComment = () => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: height, duration: 250, useNativeDriver: true }),
+    ]).start(() => setOpenPostId(null))
+  }
 
   const handlePhotoPress = (postId: number) => {
     const now = Date.now()
     const prev = lastTap.current[postId] ?? 0
     if (now - prev < 300) {
-      // double tap — place cat at random x within the post header area
+      clearTimeout(singleTapTimer.current[postId])
       const maxX = width - 48 - 12
       const minX = 70
       const x = Math.random() * (maxX - minX) + minX
       setCats(s => ({ ...s, [postId]: { visible: true, x } }))
+    } else {
+      singleTapTimer.current[postId] = setTimeout(() => {
+        setIconVisible(s => ({ ...s, [postId]: !s[postId] }))
+      }, 300)
     }
     lastTap.current[postId] = now
   }
+
+  const openPost = POSTS.find(p => p.id === openPostId) ?? null
 
   return (
     <View style={styles.page}>
@@ -96,9 +156,11 @@ export default function Main() {
 
         {POSTS.map((post) => (
           <View key={post.id} style={styles.post}>
-
             <View style={styles.postHeader}>
-              <Text style={styles.username}>{post.user}</Text>
+              <View>
+                <Text style={styles.username}>{post.user}</Text>
+                <Text style={styles.meta}>{post.location} · {post.time}</Text>
+              </View>
               {cats[post.id]?.visible && (
                 <Image
                   source={require('../assets/images/cat.png')}
@@ -107,15 +169,23 @@ export default function Main() {
               )}
             </View>
 
-            <Pressable
-              onPress={() => handlePhotoPress(post.id)}
-              style={{ width: photoWidth, height: photoHeight, marginLeft: 24 }}
-            >
-              <Image source={post.photo} style={styles.photoImg} resizeMode="cover" />
-            </Pressable>
+            <View style={{ width: photoWidth, height: photoHeight }}>
+              <Pressable
+                onPress={() => handlePhotoPress(post.id)}
+                style={StyleSheet.absoluteFill}
+              >
+                <Image source={post.photo} style={styles.photoImg} resizeMode="cover" />
+              </Pressable>
 
-            <Text style={styles.caption}>{post.caption}</Text>
-            <Text style={styles.meta}>{post.location} · {post.time}</Text>
+              {iconVisible[post.id] && (
+                <Pressable
+                  style={styles.commentIconBtn}
+                  onPress={() => openComment(post.id)}
+                >
+                  <IconComment />
+                </Pressable>
+              )}
+            </View>
           </View>
         ))}
       </ScrollView>
@@ -139,6 +209,54 @@ export default function Main() {
           <IconUser />
         </Pressable>
       </View>
+
+      <Modal
+        visible={openPostId !== null}
+        transparent
+        animationType="none"
+        onRequestClose={closeComment}
+      >
+        <Animated.View style={[styles.modalContainer, { opacity: fadeAnim }]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeComment} />
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          >
+            <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
+              <View style={styles.sheetHandle} />
+              <Text style={styles.sheetTitle}>Comment</Text>
+
+              <ScrollView
+                style={styles.commentList}
+                contentContainerStyle={styles.commentListContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                {openPost?.comments.map(c => (
+                  <View key={c.id} style={styles.commentRow}>
+                    <CommentAvatar avatar={c.avatar} color={c.color} user={c.user} />
+                    <View style={styles.commentBody}>
+                      <Text style={styles.commentUser}>{c.user}</Text>
+                      <Text style={styles.commentText}>{c.text}</Text>
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+
+              <View style={styles.inputRow}>
+                <TextInput
+                  style={styles.commentInput}
+                  placeholder={`Add a comment for ${openPost?.user ?? ''} ...`}
+                  placeholderTextColor="#b3b3b3"
+                  value={commentInput}
+                  onChangeText={setCommentInput}
+                  returnKeyType="send"
+                  onSubmitEditing={() => setCommentInput('')}
+                />
+              </View>
+            </Animated.View>
+          </KeyboardAvoidingView>
+        </Animated.View>
+      </Modal>
     </View>
   )
 }
@@ -158,13 +276,13 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   post: {
-    paddingBottom: 20,
-    marginBottom: 32,
+    paddingBottom: 8,
+    marginBottom: 12,
   },
   postHeader: {
-    minHeight: 54,
     paddingTop: 8,
-    paddingLeft: 25,
+    paddingBottom: 6,
+    paddingLeft: 14,
     paddingRight: 12,
     justifyContent: 'flex-end',
   },
@@ -175,36 +293,27 @@ const styles = StyleSheet.create({
     height: 50,
   },
   username: {
+    fontFamily: 'Alyamama',
     fontSize: 18,
     color: '#000',
-  },
-  photo: {
-    width: photoWidth,
-    height: photoHeight,
-    marginLeft: 24,
-    borderRadius: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
   },
   photoImg: {
     width: photoWidth,
     height: photoHeight,
-    borderRadius: 5,
   },
-  caption: {
-    fontSize: 16,
-    color: '#000',
-    lineHeight: 23,
-    paddingHorizontal: 25,
-    paddingTop: 14,
-    paddingBottom: 8,
+  commentIconBtn: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   meta: {
-    fontSize: 15,
-    color: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 25,
+    fontSize: 13,
+    color: 'rgba(0,0,0,0.5)',
+    marginTop: 0,
   },
   navPill: {
     position: 'absolute',
@@ -233,6 +342,90 @@ const styles = StyleSheet.create({
   navBtnTText: {
     fontFamily: 'GCPrometheusDemo-Bold',
     fontSize: 25,
+    color: '#000',
+  },
+  // Modal
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  sheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    height: height * 0.65,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+  },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  sheetTitle: {
+    fontFamily: 'GCPrometheusDemo-Regular',
+    fontSize: 18,
+    color: '#000',
+    textAlign: 'center',
+    paddingVertical: 12,
+  },
+  commentList: {
+    flex: 1,
+  },
+  commentListContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+  },
+  commentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+    gap: 12,
+  },
+  commentAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  commentAvatarPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  commentAvatarInitial: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  commentBody: {
+    flex: 1,
+    gap: 2,
+  },
+  commentUser: {
+    fontFamily: 'Alyamama',
+    fontSize: 14,
+    color: '#808080',
+  },
+  commentText: {
+    fontSize: 15,
+    color: '#000',
+    lineHeight: 21,
+  },
+  inputRow: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.06)',
+  },
+  commentInput: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 22,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    fontSize: 15,
     color: '#000',
   },
 })

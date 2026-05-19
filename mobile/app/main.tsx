@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useRouter } from "expo-router";
 import {
   View,
   Text,
@@ -200,6 +201,7 @@ function IconComment() {
 }
 
 export default function Main() {
+  const router = useRouter();
   const [cats, setCats] = useState<Record<number, CatState>>({});
   const [iconVisible, setIconVisible] = useState<Record<number, boolean>>({});
   const lastTap = useRef<Record<number, number>>({});
@@ -352,6 +354,7 @@ export default function Main() {
         </Pressable>
         <Pressable
           style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}
+          onPress={() => router.push("/message")}
         >
           <IconSend />
         </Pressable>
@@ -362,6 +365,7 @@ export default function Main() {
         </Pressable>
         <Pressable
           style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}
+          onPress={() => router.push("/search")}
         >
           <IconSearch />
         </Pressable>

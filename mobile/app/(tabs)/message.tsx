@@ -4,8 +4,7 @@ import {
   TextInput, StyleSheet, Dimensions,
 } from 'react-native'
 import { useRouter } from 'expo-router'
-import Svg, { Path, Circle } from 'react-native-svg'
-import { BlurView } from 'expo-blur'
+import Svg, { Path } from 'react-native-svg'
 
 const { width } = Dimensions.get('window')
 
@@ -18,9 +17,9 @@ type Conversation = {
 }
 
 const CONVERSATIONS: Conversation[] = [
-  { id: 1, user: 'Anthena', avatar: require('../assets/images/anthena.jpg'), color: null,      preview: 'Love the arrangement 😍' },
-  { id: 2, user: 'ian.lin', avatar: require('../assets/images/ian.jpg'),     color: null,      preview: 'Had to grab it haha' },
-  { id: 3, user: 'mia.c',   avatar: null,                                    color: '#B5C4B1', preview: 'The Sunday market is the best 🛍️' },
+  { id: 1, user: 'Anthena', avatar: require('../../assets/images/anthena.jpg'), color: null,      preview: 'Love the arrangement 😍' },
+  { id: 2, user: 'ian.lin', avatar: require('../../assets/images/ian.jpg'),     color: null,      preview: 'Had to grab it haha' },
+  { id: 3, user: 'mia.c',   avatar: null,                                       color: '#B5C4B1', preview: 'The Sunday market is the best 🛍️' },
 ]
 
 function Avatar({ avatar, color, user }: { avatar: number | null; color: string | null; user: string }) {
@@ -37,41 +36,6 @@ function IconEdit() {
     <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
       <Path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="#000" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
       <Path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="#000" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  )
-}
-
-function IconHome() {
-  return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" stroke="#000" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M9 21V12h6v9" stroke="#000" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  )
-}
-
-function IconSend() {
-  return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" stroke="#000" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  )
-}
-
-function IconSearch() {
-  return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Circle cx={11} cy={11} r={8} stroke="#000" strokeWidth={1.5} />
-      <Path d="M21 21l-4.35-4.35" stroke="#000" strokeWidth={1.5} strokeLinecap="round" />
-    </Svg>
-  )
-}
-
-function IconUser() {
-  return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="#000" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-      <Circle cx={12} cy={7} r={4} stroke="#000" strokeWidth={1.5} />
     </Svg>
   )
 }
@@ -121,27 +85,6 @@ export default function Message() {
           </Pressable>
         )}
       />
-
-      <View style={styles.navPillShadow}>
-        <BlurView intensity={80} tint="light" style={styles.navPill}>
-          <View style={styles.navPillGlass} pointerEvents="none" />
-          <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]} onPress={() => router.push('/main')}>
-            <IconHome />
-          </Pressable>
-          <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
-            <IconSend />
-          </Pressable>
-          <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
-            <Text style={styles.navBtnTText}>T</Text>
-          </Pressable>
-          <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]} onPress={() => router.push('/search')}>
-            <IconSearch />
-          </Pressable>
-          <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
-            <IconUser />
-          </Pressable>
-        </BlurView>
-      </View>
     </View>
   )
 }
@@ -206,43 +149,5 @@ const styles = StyleSheet.create({
     fontFamily: 'PublicSans-Regular',
     fontSize: 14,
     color: '#b3b3b3',
-  },
-  navPillShadow: {
-    position: 'absolute',
-    bottom: 40,
-    left: '50%',
-    marginLeft: -160,
-    width: 320,
-    height: 50,
-    borderRadius: 50,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    elevation: 12,
-  },
-  navPill: {
-    flex: 1,
-    borderRadius: 50,
-    overflow: 'hidden',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingHorizontal: 8,
-  },
-  navPillGlass: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 50,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-  },
-  navBtn: {
-    padding: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navBtnTText: {
-    fontFamily: 'GCPrometheusDemo-Bold',
-    fontSize: 25,
-    color: '#000',
   },
 })

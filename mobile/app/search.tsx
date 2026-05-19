@@ -1,16 +1,14 @@
 import { useState, useRef } from 'react'
 import {
-  View, Text, TextInput, FlatList, Image, Pressable,
-  StyleSheet, Dimensions, ScrollView, Keyboard,
+  View, Text, TextInput, Image, Pressable,
+  StyleSheet, ScrollView, Keyboard,
 } from 'react-native'
 import { Link } from 'expo-router'
+import { BlurView } from 'expo-blur'
 import Svg, { Path, Circle } from 'react-native-svg'
 
-const { width } = Dimensions.get('window')
-const GRID_GAP = 8
+const GRID_GAP = 2
 const GRID_MARGIN = 16
-const ITEM_WIDTH = (width - GRID_MARGIN * 2 - GRID_GAP * 2) / 3
-const ITEM_HEIGHT = ITEM_WIDTH * (133 / 106)
 
 // ─── Mock data ───────────────────────────────────────────────────────────────
 
@@ -41,19 +39,11 @@ const USERS_DATA = [
   { id: '4', username: 'lan_likes_dogs', subtitle: '1 mutual friend',  avatar: require('../assets/images/anthena.jpg'), defaultFollowing: false },
 ]
 
-const GRID_ITEMS = [
-  { id: '0',  source: require('../assets/images/search1.jpg') },
-  { id: '1',  source: require('../assets/images/search2.jpg') },
-  { id: '2',  source: require('../assets/images/search3.jpg') },
-  { id: '3',  source: require('../assets/images/search4.jpg') },
-  { id: '4',  source: require('../assets/images/search5.jpg') },
-  { id: '5',  source: require('../assets/images/search6.jpg') },
-  { id: '6',  source: require('../assets/images/search7.jpg') },
-  { id: '7',  source: require('../assets/images/search8.jpg') },
-  { id: '8',  source: require('../assets/images/search9.jpg') },
-  { id: '9',  source: require('../assets/images/search10.jpg') },
-  { id: '10', source: require('../assets/images/search11.jpg') },
-  { id: '11', source: require('../assets/images/search12.jpg') },
+const GRID_ROWS = [
+  [{ id: '0', source: require('../assets/images/search1.jpg') },  { id: '1', source: require('../assets/images/search2.jpg') },  { id: '2',  source: require('../assets/images/search3.jpg') }],
+  [{ id: '3', source: require('../assets/images/search4.jpg') },  { id: '4', source: require('../assets/images/search5.jpg') },  { id: '5',  source: require('../assets/images/search6.jpg') }],
+  [{ id: '6', source: require('../assets/images/search7.jpg') },  { id: '7', source: require('../assets/images/search8.jpg') },  { id: '8',  source: require('../assets/images/search9.jpg') }],
+  [{ id: '9', source: require('../assets/images/search10.jpg') }, { id: '10', source: require('../assets/images/search11.jpg') }, { id: '11', source: require('../assets/images/search12.jpg') }],
 ]
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
@@ -116,7 +106,6 @@ export default function Search() {
   const justSubmitted = useRef(false)
 
   const [query, setQuery]           = useState('')
-  const [focused, setFocused]       = useState(false)
   const [searchActive, setSearchActive] = useState(false)
   const [submitted, setSubmitted]   = useState(false)
   const [showMorePeople, setShowMorePeople] = useState(false)
@@ -135,7 +124,6 @@ export default function Search() {
   const handleBack = () => {
     justSubmitted.current = false
     setSearchActive(false)
-    setFocused(false)
     setQuery('')
     setSubmitted(false)
     inputRef.current?.blur()
@@ -146,7 +134,6 @@ export default function Search() {
     justSubmitted.current = true
     setSubmitted(true)
     setSearchActive(false)
-    setFocused(false)
     Keyboard.dismiss()
   }
 
@@ -197,8 +184,8 @@ export default function Search() {
             placeholderTextColor="#595959"
             value={query}
             onChangeText={setQuery}
-            onFocus={() => { setFocused(true); setSearchActive(true); setSubmitted(false) }}
-            onBlur={() => setFocused(false)}
+            onFocus={() => { setSearchActive(true); setSubmitted(false) }}
+            onBlur={() => {}}
             returnKeyType="search"
             onSubmitEditing={handleSubmit}
           />
@@ -353,39 +340,49 @@ export default function Search() {
 
       {/* ── Browse & Results: image grid ── */}
       {!isHistory && !isTyping && (
-        <FlatList
-          data={GRID_ITEMS}
-          numColumns={3}
-          keyExtractor={item => item.id}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.gridContent}
-          columnWrapperStyle={styles.gridRow}
-          renderItem={({ item }) => (
-            <Image source={item.source} style={styles.gridItem} resizeMode="cover" />
-          )}
-        />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.gridContent}>
+          {GRID_ROWS.map((row, rowIdx) => (
+            <View key={rowIdx} style={styles.gridRow}>
+              {row.map((item, colIdx) => (
+                <Image
+                  key={item.id}
+                  source={item.source}
+                  style={[styles.gridItem, colIdx < 2 && { marginRight: GRID_GAP }]}
+                  resizeMode="cover"
+                />
+              ))}
+            </View>
+          ))}
+        </ScrollView>
       )}
 
       {/* ── Nav pill (hidden while in search mode) ── */}
       {!searchActive && (
-        <View style={styles.navPill}>
-          <Link href="/main" asChild>
+        <View style={styles.navPillShadow}>
+          <BlurView intensity={80} tint="light" style={styles.navPill}>
+            <View style={styles.navPillGlass} pointerEvents="none" />
+            <Link href="/main" asChild>
+              <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
+                <IconHome />
+              </Pressable>
+            </Link>
+            <Link href="/message" asChild>
+              <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
+                <IconSend />
+              </Pressable>
+            </Link>
             <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
-              <IconHome />
+              <Text style={styles.navBtnTText}>W</Text>
             </Pressable>
-          </Link>
-          <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
-            <IconSend />
-          </Pressable>
-          <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
-            <Text style={styles.navBtnTText}>T</Text>
-          </Pressable>
-          <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
-            <IconSearch />
-          </Pressable>
-          <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
-            <IconUser />
-          </Pressable>
+            <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
+              <IconSearch />
+            </Pressable>
+            <Link href="/profile" asChild>
+              <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
+                <IconUser />
+              </Pressable>
+            </Link>
+          </BlurView>
         </View>
       )}
     </View>
@@ -601,39 +598,46 @@ const styles = StyleSheet.create({
 
   // ── Grid ──
   gridContent: {
-    paddingHorizontal: GRID_MARGIN,
     paddingTop: 6,
     paddingBottom: 110,
   },
   gridRow: {
-    gap: GRID_GAP,
+    flexDirection: 'row',
     marginBottom: GRID_GAP,
   },
   gridItem: {
-    width: ITEM_WIDTH,
-    height: ITEM_HEIGHT,
-    borderRadius: 5,
+    flex: 1,
+    aspectRatio: 106 / 133,
   },
 
   // ── Nav pill ──
-  navPill: {
+  navPillShadow: {
     position: 'absolute',
     bottom: 40,
     left: '50%',
     marginLeft: -160,
     width: 320,
     height: 50,
-    backgroundColor: 'rgba(235,235,235,0.35)',
     borderRadius: 50,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  navPill: {
+    flex: 1,
+    borderRadius: 50,
+    overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
     paddingHorizontal: 8,
+  },
+  navPillGlass: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
   navBtn: {
     padding: 6,

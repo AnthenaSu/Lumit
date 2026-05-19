@@ -15,6 +15,7 @@ import {
   Animated,
 } from "react-native";
 import Svg, { Path, Circle } from "react-native-svg";
+import { BlurView } from 'expo-blur'
 
 const { width, height } = Dimensions.get("window");
 const photoWidth = width;
@@ -507,6 +508,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-around",
     paddingHorizontal: 8,
+  },
+  navPillGlass: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
   navBtn: {
     padding: 6,

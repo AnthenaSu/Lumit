@@ -4,7 +4,8 @@ import {
   TextInput, StyleSheet, Dimensions,
 } from 'react-native'
 import { useRouter } from 'expo-router'
-import Svg, { Path, Circle, Rect } from 'react-native-svg'
+import Svg, { Path, Circle } from 'react-native-svg'
+import { BlurView } from 'expo-blur'
 
 const { width } = Dimensions.get('window')
 
@@ -121,22 +122,25 @@ export default function Message() {
         )}
       />
 
-      <View style={styles.navPill}>
-        <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]} onPress={() => router.push('/main')}>
-          <IconHome />
-        </Pressable>
-        <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
-          <IconSend />
-        </Pressable>
-        <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
-          <Text style={styles.navBtnTText}>T</Text>
-        </Pressable>
-        <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]} onPress={() => router.push('/search')}>
-          <IconSearch />
-        </Pressable>
-        <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
-          <IconUser />
-        </Pressable>
+      <View style={styles.navPillShadow}>
+        <BlurView intensity={80} tint="light" style={styles.navPill}>
+          <View style={styles.navPillGlass} pointerEvents="none" />
+          <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]} onPress={() => router.push('/main')}>
+            <IconHome />
+          </Pressable>
+          <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
+            <IconSend />
+          </Pressable>
+          <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
+            <Text style={styles.navBtnTText}>T</Text>
+          </Pressable>
+          <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]} onPress={() => router.push('/search')}>
+            <IconSearch />
+          </Pressable>
+          <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
+            <IconUser />
+          </Pressable>
+        </BlurView>
       </View>
     </View>
   )
@@ -203,24 +207,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#b3b3b3',
   },
-  navPill: {
+  navPillShadow: {
     position: 'absolute',
     bottom: 40,
     left: '50%',
     marginLeft: -160,
     width: 320,
     height: 50,
-    backgroundColor: 'rgba(235,235,235,0.35)',
     borderRadius: 50,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  navPill: {
+    flex: 1,
+    borderRadius: 50,
+    overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
     paddingHorizontal: 8,
+  },
+  navPillGlass: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
   navBtn: {
     padding: 6,

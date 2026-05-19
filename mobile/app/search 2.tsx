@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import {
   View, Text, TextInput, FlatList, Image, Pressable,
-  StyleSheet, Dimensions, ScrollView, Keyboard,
+  StyleSheet, Dimensions, ScrollView, Keyboard, TouchableWithoutFeedback,
 } from 'react-native'
 import { Link } from 'expo-router'
 import Svg, { Path, Circle } from 'react-native-svg'
@@ -41,20 +41,12 @@ const USERS_DATA = [
   { id: '4', username: 'lan_likes_dogs', subtitle: '1 mutual friend',  avatar: require('../assets/images/anthena.jpg'), defaultFollowing: false },
 ]
 
-const GRID_ITEMS = [
-  { id: '0',  source: require('../assets/images/search1.jpg') },
-  { id: '1',  source: require('../assets/images/search2.jpg') },
-  { id: '2',  source: require('../assets/images/search3.jpg') },
-  { id: '3',  source: require('../assets/images/search4.jpg') },
-  { id: '4',  source: require('../assets/images/search5.jpg') },
-  { id: '5',  source: require('../assets/images/search6.jpg') },
-  { id: '6',  source: require('../assets/images/search7.jpg') },
-  { id: '7',  source: require('../assets/images/search8.jpg') },
-  { id: '8',  source: require('../assets/images/search9.jpg') },
-  { id: '9',  source: require('../assets/images/search10.jpg') },
-  { id: '10', source: require('../assets/images/search11.jpg') },
-  { id: '11', source: require('../assets/images/search12.jpg') },
-]
+const GRID_ITEMS = Array.from({ length: 12 }, (_, i) => ({
+  id: String(i),
+  source: i % 2 === 0
+    ? require('../assets/images/post1.jpg')
+    : require('../assets/images/post2.jpg'),
+}))
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 
@@ -172,10 +164,11 @@ export default function Search() {
   const pageBg = showSearchHeader ? '#f8f7f7' : '#fff'
 
   return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
     <View style={[styles.page, { backgroundColor: pageBg }]}>
 
       {/* ── Top area ── */}
-      <Pressable onPress={Keyboard.dismiss} style={styles.topArea}>
+      <View style={styles.topArea}>
         {showSearchHeader ? (
           <View style={styles.headerRow}>
             <Pressable onPress={handleBack} hitSlop={16} style={styles.chevronBtn}>
@@ -203,7 +196,7 @@ export default function Search() {
             onSubmitEditing={handleSubmit}
           />
         </View>
-      </Pressable>
+      </View>
 
       {/* ── History state ── */}
       {isHistory && (
@@ -389,6 +382,7 @@ export default function Search() {
         </View>
       )}
     </View>
+    </TouchableWithoutFeedback>
   )
 }
 
@@ -435,11 +429,13 @@ const styles = StyleSheet.create({
 
   // Search bar
   searchBarWrap: {
+    width: 340,
     height: 42,
     backgroundColor: '#d9d9d9',
     borderRadius: 15,
     justifyContent: 'center',
     paddingHorizontal: 16,
+    alignSelf: 'center',
   },
   searchInput: {
     fontFamily: 'GCPrometheusDemo-Regular',
@@ -480,7 +476,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontFamily: 'GCPrometheusDemo-Regular',
     fontSize: 13,
-    color: '#999999',
+    color: '#b3b3b3',
     letterSpacing: 0.8,
   },
   clearText: {
@@ -567,13 +563,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rowName: {
-    fontFamily: 'PublicSans-SemiBold',
+    fontFamily: 'GCPrometheusDemo-Regular',
     fontSize: 17,
     color: '#000',
     marginBottom: 2,
   },
   rowSub: {
-    fontFamily: 'PublicSans-Regular',
+    fontFamily: 'GCPrometheusDemo-Regular',
     fontSize: 15,
     color: '#808080',
   },

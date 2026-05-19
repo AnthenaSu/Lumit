@@ -366,9 +366,11 @@ export default function Search() {
                 <IconHome />
               </Pressable>
             </Link>
-            <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
-              <IconSend />
-            </Pressable>
+            <Link href="/message" asChild>
+              <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
+                <IconSend />
+              </Pressable>
+            </Link>
             <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
               <Text style={styles.navBtnTText}>W</Text>
             </Pressable>

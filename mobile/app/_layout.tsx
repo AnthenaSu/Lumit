@@ -16,6 +16,9 @@ export default function RootLayout() {
     'Alyamama': require('../assets/fonts/Alyamama-Regular.ttf'),
     'PublicSans-Regular': require('../assets/fonts/PublicSans-Regular.ttf'),
     'PublicSans-SemiBold': require('../assets/fonts/PublicSans-SemiBold.ttf'),
+    'CormorantSC-Medium': require('../assets/fonts/CormorantSC-Medium.ttf'),
+    'CormorantSC-SemiBold': require('../assets/fonts/CormorantSC-SemiBold.ttf'),
+    'CormorantSC-Bold': require('../assets/fonts/CormorantSC-Bold.ttf'),
   })
 
   useEffect(() => {

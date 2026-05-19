@@ -5,6 +5,7 @@ import {
 } from 'react-native'
 import Svg, { Path, Circle } from 'react-native-svg'
 import { Link } from 'expo-router'
+import { BlurView } from 'expo-blur'
 
 const { width, height } = Dimensions.get('window')
 const photoWidth = width
@@ -190,24 +191,29 @@ export default function Main() {
         ))}
       </ScrollView>
 
-      <View style={styles.navPill}>
-        <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
-          <IconHome />
-        </Pressable>
-        <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
-          <IconSend />
-        </Pressable>
-        <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
-          <Text style={styles.navBtnTText}>T</Text>
-        </Pressable>
-        <Link href="/search" asChild>
+      <View style={styles.navPillShadow}>
+        <BlurView intensity={80} tint="light" style={styles.navPill}>
+          <View style={styles.navPillGlass} pointerEvents="none" />
           <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
-            <IconSearch />
+            <IconHome />
           </Pressable>
-        </Link>
-        <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
-          <IconUser />
-        </Pressable>
+          <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
+            <IconSend />
+          </Pressable>
+          <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
+            <Text style={styles.navBtnTText}>W</Text>
+          </Pressable>
+          <Link href="/search" asChild>
+            <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
+              <IconSearch />
+            </Pressable>
+          </Link>
+          <Link href="/profile" asChild>
+            <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
+              <IconUser />
+            </Pressable>
+          </Link>
+        </BlurView>
       </View>
 
       <Modal
@@ -315,24 +321,33 @@ const styles = StyleSheet.create({
     color: 'rgba(0,0,0,0.5)',
     marginTop: 0,
   },
-  navPill: {
+  navPillShadow: {
     position: 'absolute',
     bottom: 40,
     left: '50%',
     marginLeft: -160,
     width: 320,
     height: 50,
-    backgroundColor: 'rgba(235,235,235,0.35)',
     borderRadius: 50,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  navPill: {
+    flex: 1,
+    borderRadius: 50,
+    overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
     paddingHorizontal: 8,
+  },
+  navPillGlass: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
   navBtn: {
     padding: 6,

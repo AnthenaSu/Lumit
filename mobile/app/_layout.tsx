@@ -13,6 +13,7 @@ export default function RootLayout() {
     'GCPrometheusDemo-SemiBold': require('../assets/fonts/GCPrometheusDemo-SemiBold.ttf'),
     'GCPrometheusDemo-Bold': require('../assets/fonts/GCPrometheusDemo-Bold.ttf'),
     'FigueaGranatae': require('../assets/fonts/FigueaGranatae.ttf'),
+    'Alyamama': require('../assets/fonts/Alyamama-Regular.ttf'),
     'PublicSans-Regular': require('../assets/fonts/PublicSans-Regular.ttf'),
     'PublicSans-SemiBold': require('../assets/fonts/PublicSans-SemiBold.ttf'),
   })

@@ -3,7 +3,7 @@ import { useRouter } from "expo-router";
 import {
   View, Text, ScrollView, Pressable, StyleSheet, Dimensions,
   Image, Modal, TextInput, KeyboardAvoidingView, Platform, Animated, FlatList,
-  Share, Linking,
+  Share, Linking, Keyboard,
 } from "react-native";
 import Svg, { Path, Circle } from "react-native-svg";
 import * as Clipboard from "expo-clipboard";
@@ -173,6 +173,7 @@ export default function Main() {
   const sheetAnim = useRef(new Animated.Value(500)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
   const sendBarAnim = useRef(new Animated.Value(0)).current;
+  const sheetBottom = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(sendBarAnim, {
@@ -181,6 +182,34 @@ export default function Main() {
       useNativeDriver: true,
     }).start();
   }, [selectedFriend]);
+
+  useEffect(() => {
+    if (sharePostId === null) {
+      sheetBottom.setValue(0);
+      return;
+    }
+    const onShow = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        Animated.timing(sheetBottom, {
+          toValue: e.endCoordinates.height,
+          duration: Platform.OS === 'ios' ? e.duration : 200,
+          useNativeDriver: false,
+        }).start();
+      }
+    );
+    const onHide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      (e) => {
+        Animated.timing(sheetBottom, {
+          toValue: 0,
+          duration: Platform.OS === 'ios' ? e.duration : 200,
+          useNativeDriver: false,
+        }).start();
+      }
+    );
+    return () => { onShow.remove(); onHide.remove(); };
+  }, [sharePostId]);
 
   const openShare = (postId: number) => {
     setSharePostId(postId);
@@ -325,7 +354,7 @@ export default function Main() {
           </Animated.View>
 
           {/* sheet */}
-          <Animated.View style={[styles.shareSheet, { transform: [{ translateY: sheetAnim }] }]}>
+          <Animated.View style={[styles.shareSheet, { transform: [{ translateY: sheetAnim }], bottom: sheetBottom }]}>
             <View style={styles.shareHandle} />
 
             {/* Search row */}

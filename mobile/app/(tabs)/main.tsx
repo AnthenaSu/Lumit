@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "expo-router";
 import {
   View, Text, ScrollView, Pressable, StyleSheet, Dimensions,
@@ -172,6 +172,15 @@ export default function Main() {
   const [copied, setCopied] = useState(false);
   const sheetAnim = useRef(new Animated.Value(500)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
+  const sendBarAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(sendBarAnim, {
+      toValue: selectedFriend ? 1 : 0,
+      duration: 220,
+      useNativeDriver: true,
+    }).start();
+  }, [selectedFriend]);
 
   const openShare = (postId: number) => {
     setSharePostId(postId);
@@ -380,21 +389,30 @@ export default function Main() {
               </Pressable>
             </View>
 
-            {/* Send bar — absolutely positioned, overlays the app row when a friend is selected */}
-            {selectedFriend && (
-              <View style={styles.sendBar}>
-                <TextInput
-                  style={styles.sendMsgInput}
-                  placeholder="Write a message..."
-                  placeholderTextColor="#aaa"
-                  value={sendMessage}
-                  onChangeText={setSendMessage}
-                />
-                <Pressable style={styles.sendBtn} onPress={confirmSend}>
-                  <Text style={styles.sendBtnText}>Send</Text>
-                </Pressable>
-              </View>
-            )}
+            {/* Send bar — absolutely positioned, animates over app row when friend selected */}
+            <Animated.View
+              style={[
+                styles.sendBar,
+                {
+                  opacity: sendBarAnim,
+                  transform: [{
+                    translateY: sendBarAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }),
+                  }],
+                },
+              ]}
+              pointerEvents={selectedFriend ? "auto" : "none"}
+            >
+              <TextInput
+                style={styles.sendMsgInput}
+                placeholder="Write a message..."
+                placeholderTextColor="#aaa"
+                value={sendMessage}
+                onChangeText={setSendMessage}
+              />
+              <Pressable style={styles.sendBtn} onPress={confirmSend}>
+                <Text style={styles.sendBtnText}>Send</Text>
+              </Pressable>
+            </Animated.View>
           </Animated.View>
         </View>
       </Modal>

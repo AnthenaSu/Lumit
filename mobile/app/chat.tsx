@@ -15,6 +15,7 @@ const AVATARS: Record<string, number> = {
 const COLORS: Record<string, string> = {
   'mia.c': '#B5C4B1',
 }
+const MY_AVATAR = require('../assets/images/profile_avatar.jpg')
 
 const POST_DATA: Record<number, { user: string; photo: number }> = {
   1: { user: 'Anthena', photo: require('../assets/images/post1.jpg') },

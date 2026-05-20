@@ -1,5 +1,10 @@
-import { View, Text, Image, ScrollView, Pressable, StyleSheet } from 'react-native'
+import { useState, useRef, useEffect } from 'react'
+import {
+  View, Text, Image, ScrollView, Pressable, StyleSheet,
+  Modal, TextInput, FlatList, Dimensions, Animated, Easing,
+} from 'react-native'
 
+const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const GRID_GAP = 2
 
 const GRID_ROWS = [
@@ -25,7 +30,65 @@ const GRID_ROWS = [
   ],
 ]
 
+type FollowUser = { id: number; user: string; avatar?: number; color?: string }
+
+const FOLLOWING_LIST: FollowUser[] = [
+  { id: 1, user: 'ian_lin',      avatar: require('../../assets/images/follow_user1.jpg') },
+  { id: 2, user: 'winneneglass', avatar: require('../../assets/images/follow_user2.jpg') },
+  { id: 3, user: 'coco_0528',    avatar: require('../../assets/images/follow_user3.jpg') },
+]
+
+const FOLLOWERS_LIST: FollowUser[] = [
+  { id: 1, user: 'ian_lin',      avatar: require('../../assets/images/follow_user1.jpg') },
+  { id: 2, user: 'winneneglass', avatar: require('../../assets/images/follow_user2.jpg') },
+  { id: 3, user: 'coco_0528',    avatar: require('../../assets/images/follow_user3.jpg') },
+]
+
 export default function Profile() {
+  const [followModal, setFollowModal] = useState(false)
+  const [followTab, setFollowTab] = useState<'following' | 'followers'>('following')
+  const [followSearch, setFollowSearch] = useState('')
+  const SHEET_HEIGHT = SCREEN_HEIGHT * 0.88
+  const sheetY = useRef(new Animated.Value(SHEET_HEIGHT)).current
+  const backdropOpacity = useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    if (followModal) {
+      backdropOpacity.setValue(0)
+      Animated.parallel([
+        Animated.timing(backdropOpacity, {
+          toValue: 1,
+          duration: 250,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.spring(sheetY, {
+          toValue: 0,
+          tension: 65,
+          friction: 11,
+          useNativeDriver: true,
+        }),
+      ]).start()
+    }
+  }, [followModal])
+
+  function closeModal() {
+    backdropOpacity.setValue(0)
+    Animated.timing(sheetY, {
+      toValue: SHEET_HEIGHT,
+      duration: 260,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => {
+      setFollowModal(false)
+      sheetY.setValue(SHEET_HEIGHT)
+    })
+  }
+
+  const listData = (followTab === 'following' ? FOLLOWING_LIST : FOLLOWERS_LIST).filter(u =>
+    u.user.toLowerCase().includes(followSearch.toLowerCase())
+  )
+
   return (
     <View style={styles.page}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
@@ -40,7 +103,10 @@ export default function Profile() {
           <Text style={styles.location}>Sydney AUS</Text>
           <Text style={styles.social}>Instagram{'             '}Spotify</Text>
           <View style={styles.btnRow}>
-            <Pressable style={({ pressed }) => [styles.pillBtn, pressed && { opacity: 0.6 }]}>
+            <Pressable
+              style={({ pressed }) => [styles.pillBtn, pressed && { opacity: 0.6 }]}
+              onPress={() => { setFollowTab('following'); setFollowModal(true) }}
+            >
               <Text style={styles.pillBtnText}>Following</Text>
             </Pressable>
             <Pressable style={({ pressed }) => [styles.pillBtn, pressed && { opacity: 0.6 }]}>
@@ -66,6 +132,62 @@ export default function Profile() {
         ))}
 
       </ScrollView>
+
+      {/* Following / Followers modal */}
+      <Modal
+        visible={followModal}
+        transparent
+        animationType="none"
+        onRequestClose={() => closeModal()}
+      >
+        <Animated.View style={[styles.modalBackdrop, { opacity: backdropOpacity }]} pointerEvents="box-none">
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
+        </Animated.View>
+        <Animated.View style={[styles.modalSheet, { transform: [{ translateY: sheetY }] }]}>
+          {/* Tabs */}
+          <View style={styles.modalHeader}>
+            <Pressable onPress={() => setFollowTab('following')}>
+              <Text style={[styles.modalTabText, followTab === 'following' ? styles.tabActive : styles.tabInactive]}>
+                Following
+              </Text>
+            </Pressable>
+            <Text style={styles.modalSep}>/</Text>
+            <Pressable onPress={() => setFollowTab('followers')}>
+              <Text style={[styles.modalTabText, followTab === 'followers' ? styles.tabActive : styles.tabInactive]}>
+                Followers
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* Search bar */}
+          <View style={styles.modalSearch}>
+            <TextInput
+              style={styles.modalSearchInput}
+              placeholder="Search"
+              placeholderTextColor="#b3b3b3"
+              value={followSearch}
+              onChangeText={setFollowSearch}
+            />
+          </View>
+
+          {/* User list */}
+          <FlatList
+            data={listData}
+            keyExtractor={item => String(item.id)}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <View style={styles.followRow}>
+                {item.avatar ? (
+                  <Image source={item.avatar} style={styles.followAvatar} resizeMode="cover" />
+                ) : (
+                  <View style={[styles.followAvatar, { backgroundColor: item.color }]} />
+                )}
+                <Text style={styles.followName}>{item.user}</Text>
+              </View>
+            )}
+          />
+        </Animated.View>
+      </Modal>
     </View>
   )
 }
@@ -80,7 +202,7 @@ const styles = StyleSheet.create({
     right: 26,
     width: 72,
     height: 72,
-    borderRadius: 36,
+    borderRadius: 15,
     overflow: 'hidden',
   },
   name: { fontFamily: 'GCPrometheusDemo-Medium', fontSize: 40, color: '#000', marginBottom: 2 },
@@ -99,4 +221,77 @@ const styles = StyleSheet.create({
   pillBtnText: { fontFamily: 'CormorantSC-SemiBold', fontSize: 18, color: '#000' },
   gridRow: { flexDirection: 'row', marginBottom: GRID_GAP },
   gridItem: { flex: 1, aspectRatio: 120 / 160 },
+
+  // ── Modal ──
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  modalSheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 10,
+    height: SCREEN_HEIGHT * 0.68,
+    paddingBottom: 30,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 25,
+    paddingTop: 24,
+    paddingBottom: 16,
+    gap: 10,
+  },
+  modalTabText: {
+    fontFamily: 'GCPrometheusDemo-Regular',
+    fontSize: 35,
+  },
+  tabActive: { color: '#000' },
+  tabInactive: { color: '#b3b3b3' },
+  modalSep: {
+    fontFamily: 'GCPrometheusDemo-Regular',
+    fontSize: 35,
+    color: '#000',
+  },
+  modalSearch: {
+    marginHorizontal: 25,
+    marginBottom: 8,
+    backgroundColor: '#d9d9d9',
+    borderRadius: 15,
+    height: 40,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  modalSearchInput: {
+    fontFamily: 'PublicSans-Regular',
+    fontSize: 16,
+    color: '#000',
+  },
+  followRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 25,
+    paddingVertical: 10,
+    gap: 16,
+  },
+  followAvatar: {
+    width: 61,
+    height: 61,
+    borderRadius: 15,
+    overflow: 'hidden',
+  },
+  followName: {
+    fontFamily: 'PublicSans-Regular',
+    fontSize: 17,
+    color: '#000',
+  },
 })

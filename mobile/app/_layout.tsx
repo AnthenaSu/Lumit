@@ -33,6 +33,11 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
         <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
         <Stack.Screen name="notification" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="user-profile" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="chat" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="search-history" options={{ animation: 'fade' }} />
+        <Stack.Screen name="new-post" options={{ animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="new-post-individual" options={{ animation: 'slide_from_right' }} />
       </Stack>
     </>
   )

@@ -204,7 +204,7 @@ export default function Main() {
   const handleCopyLink = async () => {
     await Clipboard.setStringAsync(`https://lumit.app/post/${sharePostId}`);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    setTimeout(() => setCopied(false), 5000);
   };
 
   const handleInstagram = async () => {
@@ -368,7 +368,7 @@ export default function Main() {
             <View style={styles.appShareRow}>
               <Pressable style={styles.appItem} onPress={handleCopyLink}>
                 <AppIcon icon={copied ? "check" : "link"} />
-                <Text style={styles.appLabel}>Copy link</Text>
+                <Text style={styles.appLabel}>{copied ? "Copied" : "Copy link"}</Text>
               </Pressable>
               <Pressable style={styles.appItem} onPress={handleInstagram}>
                 <AppIcon icon="instagram" />
@@ -380,21 +380,22 @@ export default function Main() {
               </Pressable>
             </View>
 
-            {/* Send bar — visible when a friend is selected */}
-            {selectedFriend && (
-              <View style={styles.sendBar}>
-                <TextInput
-                  style={styles.sendMsgInput}
-                  placeholder="Write a message..."
-                  placeholderTextColor="#aaa"
-                  value={sendMessage}
-                  onChangeText={setSendMessage}
-                />
-                <Pressable style={styles.sendBtn} onPress={confirmSend}>
-                  <Text style={styles.sendBtnText}>Send</Text>
-                </Pressable>
-              </View>
-            )}
+            {/* Send bar — always rendered to avoid height jump, opacity toggles */}
+            <View
+              style={[styles.sendBar, { opacity: selectedFriend ? 1 : 0 }]}
+              pointerEvents={selectedFriend ? "auto" : "none"}
+            >
+              <TextInput
+                style={styles.sendMsgInput}
+                placeholder="Write a message..."
+                placeholderTextColor="#aaa"
+                value={sendMessage}
+                onChangeText={setSendMessage}
+              />
+              <Pressable style={styles.sendBtn} onPress={confirmSend}>
+                <Text style={styles.sendBtnText}>Send</Text>
+              </Pressable>
+            </View>
           </Animated.View>
         </View>
       </Modal>
@@ -555,9 +556,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   sendBtnText: {
-    fontFamily: "PublicSans-Regular",
+    fontFamily: "GCPrometheusDemo-SemiBold",
     fontSize: 17,
-    fontWeight: "600",
     color: "#fff",
   },
 

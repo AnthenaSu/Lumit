@@ -6,7 +6,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import Svg, { Path, Circle } from 'react-native-svg'
 
-const { width, height } = Dimensions.get('window')
+const { width } = Dimensions.get('window')
 
 const AVATARS: Record<string, number> = {
   'Anthena': require('../assets/images/anthena.jpg'),
@@ -16,19 +16,22 @@ const COLORS: Record<string, string> = {
   'mia.c': '#B5C4B1',
 }
 
-type Message = { id: number; from: 'me' | 'other'; text: string }
+const POST_DATA: Record<number, { user: string; photo: number }> = {
+  1: { user: 'Anthena', photo: require('../assets/images/post1.jpg') },
+  2: { user: 'ian.lin', photo: require('../assets/images/post2.jpg') },
+}
 
-const MOCK_MESSAGES: Message[] = [
-  { id: 1, from: 'other', text: 'Hi' },
-  { id: 2, from: 'me',    text: 'Hi' },
-]
+type Message =
+  | { id: number; from: 'me' | 'other'; type: 'text'; text: string }
+  | { id: number; from: 'me'; type: 'post'; postId: number }
 
-function Avatar({ user }: { user: string }) {
+function Avatar({ user, size = 40 }: { user: string; size?: number }) {
   const avatar = AVATARS[user]
-  if (avatar) return <Image source={avatar} style={styles.avatar} />
+  const style = { width: size, height: size, borderRadius: size * 0.375, alignItems: 'center' as const, justifyContent: 'center' as const }
+  if (avatar) return <Image source={avatar} style={style} />
   return (
-    <View style={[styles.avatar, { backgroundColor: COLORS[user] ?? '#ccc' }]}>
-      <Text style={styles.avatarInitial}>{user[0].toUpperCase()}</Text>
+    <View style={[style, { backgroundColor: COLORS[user] ?? '#ccc' }]}>
+      <Text style={{ color: '#fff', fontSize: size * 0.4, fontWeight: '600' }}>{user[0].toUpperCase()}</Text>
     </View>
   )
 }
@@ -62,24 +65,60 @@ function IconPhoto() {
 
 export default function Chat() {
   const router = useRouter()
-  const { user = 'User' } = useLocalSearchParams<{ user: string }>()
-  const [messages, setMessages] = useState<Message[]>(MOCK_MESSAGES)
+  const { user = 'User', sharedPostId } = useLocalSearchParams<{ user: string; sharedPostId?: string }>()
+
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const initial: Message[] = [
+      { id: 1, from: 'other', type: 'text', text: 'Hi' },
+      { id: 2, from: 'me',    type: 'text', text: 'Hi' },
+    ]
+    if (sharedPostId) {
+      initial.push({ id: 3, from: 'me', type: 'post', postId: Number(sharedPostId) })
+    }
+    return initial
+  })
+
   const [input, setInput] = useState('')
   const listRef = useRef<FlatList>(null)
 
   const send = () => {
     if (!input.trim()) return
-    setMessages(m => [...m, { id: Date.now(), from: 'me', text: input.trim() }])
+    setMessages(m => [...m, { id: Date.now(), from: 'me', type: 'text', text: input.trim() }])
     setInput('')
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50)
   }
 
+  const renderMessage = ({ item }: { item: Message }) => {
+    const isMe = item.from === 'me'
+
+    if (item.type === 'post') {
+      const post = POST_DATA[item.postId]
+      if (!post) return null
+      return (
+        <View style={[styles.row, styles.rowMe]}>
+          <View style={styles.postBubble}>
+            <Image source={post.photo} style={styles.postBubblePhoto} resizeMode="cover" />
+            <View style={styles.postBubbleFooter}>
+              <Avatar user={post.user} size={20} />
+              <Text style={styles.postBubbleUser}>{post.user}</Text>
+            </View>
+          </View>
+        </View>
+      )
+    }
+
+    return (
+      <View style={[styles.row, isMe ? styles.rowMe : styles.rowOther]}>
+        {!isMe && <Avatar user={user} />}
+        <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
+          <Text style={styles.bubbleText}>{item.text}</Text>
+        </View>
+      </View>
+    )
+  }
+
   return (
-    <KeyboardAvoidingView
-      style={styles.page}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      {/* Header */}
+    <KeyboardAvoidingView style={styles.page} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <IconBack />
@@ -92,26 +131,15 @@ export default function Chat() {
       </View>
       <View style={styles.divider} />
 
-      {/* Messages */}
       <FlatList
         ref={listRef}
         data={messages}
         keyExtractor={item => String(item.id)}
         contentContainerStyle={styles.messageList}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <View style={[styles.row, item.from === 'me' ? styles.rowMe : styles.rowOther]}>
-            {item.from === 'other' && (
-              <Avatar user={user} />
-            )}
-            <View style={[styles.bubble, item.from === 'me' ? styles.bubbleMe : styles.bubbleOther]}>
-              <Text style={styles.bubbleText}>{item.text}</Text>
-            </View>
-          </View>
-        )}
+        renderItem={renderMessage}
       />
 
-      {/* Input */}
       <View style={styles.inputBar}>
         <TextInput
           style={styles.input}
@@ -141,39 +169,43 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   backBtn: { marginRight: 2 },
-  username: {
-    fontFamily: 'GCPrometheusDemo-Medium',
-    fontSize: 22,
-    color: '#000',
-    flex: 1,
-  },
+  username: { fontFamily: 'GCPrometheusDemo-Medium', fontSize: 22, color: '#000', flex: 1 },
   moreBtn: { padding: 4 },
   divider: { height: 1, backgroundColor: 'rgba(0,0,0,0.08)' },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitial: { fontSize: 16, color: '#fff', fontWeight: '600' },
+  avatar: { width: 40, height: 40, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   messageList: { padding: 16, gap: 10 },
   row: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
   rowMe: { justifyContent: 'flex-end' },
   rowOther: { justifyContent: 'flex-start' },
-  bubble: {
-    maxWidth: width * 0.65,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 18,
-  },
+  bubble: { maxWidth: width * 0.65, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18 },
   bubbleMe: { backgroundColor: '#e5e5ea' },
   bubbleOther: { backgroundColor: '#f0f0f0' },
-  bubbleText: {
-    fontFamily: 'PublicSans-Regular',
-    fontSize: 16,
-    color: '#000',
+  bubbleText: { fontFamily: 'PublicSans-Regular', fontSize: 16, color: '#000' },
+
+  // Shared post bubble
+  postBubble: {
+    width: width * 0.65,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#f0f0f0',
   },
+  postBubblePhoto: {
+    width: '100%',
+    aspectRatio: 4 / 3,
+  },
+  postBubbleFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  postBubbleUser: {
+    fontFamily: 'PublicSans-Regular',
+    fontSize: 13,
+    color: '#333',
+  },
+
   inputBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -185,11 +217,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 50,
   },
-  input: {
-    flex: 1,
-    fontFamily: 'PublicSans-Regular',
-    fontSize: 16,
-    color: '#000',
-  },
+  input: { flex: 1, fontFamily: 'PublicSans-Regular', fontSize: 16, color: '#000' },
   photoBtn: { marginLeft: 8 },
 })

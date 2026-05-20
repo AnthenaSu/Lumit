@@ -353,8 +353,9 @@ export default function Main() {
             <Pressable style={StyleSheet.absoluteFill} onPress={closeShare} />
           </Animated.View>
 
-          {/* sheet */}
-          <Animated.View style={[styles.shareSheet, { transform: [{ translateY: sheetAnim }], bottom: sheetBottom }]}>
+          {/* sheet — outer for keyboard bottom, inner for spring slide-in */}
+          <Animated.View style={{ position: 'absolute', left: 0, right: 0, bottom: sheetBottom }}>
+          <Animated.View style={[styles.shareSheet, { transform: [{ translateY: sheetAnim }] }]}>
             <View style={styles.shareHandle} />
 
             {/* Search row */}
@@ -443,6 +444,7 @@ export default function Main() {
               </Pressable>
             </Animated.View>
           </Animated.View>
+          </Animated.View>
         </View>
       </Modal>
 
@@ -503,10 +505,6 @@ const styles = StyleSheet.create({
   // ── Share sheet ──
   shareBackdrop: { backgroundColor: "rgba(0,0,0,0.55)" },
   shareSheet: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: "#fff",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,

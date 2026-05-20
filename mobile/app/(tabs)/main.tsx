@@ -1,31 +1,17 @@
 import { useState, useRef } from "react";
 import { useRouter } from "expo-router";
 import {
-  View,
-  Text,
-  ScrollView,
-  Pressable,
-  StyleSheet,
-  Dimensions,
-  Image,
-  Modal,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  Animated,
+  View, Text, ScrollView, Pressable, StyleSheet, Dimensions,
+  Image, Modal, TextInput, KeyboardAvoidingView, Platform, Animated, FlatList,
 } from "react-native";
-import Svg, { Path, Circle } from "react-native-svg";
+import Svg, { Path, Circle, Rect, Line } from "react-native-svg";
 
 const { width, height } = Dimensions.get("window");
 const photoWidth = width;
 const photoHeight = width * (4 / 3);
 
 type Comment = {
-  id: number;
-  user: string;
-  avatar: number | null;
-  color: string | null;
-  text: string;
+  id: number; user: string; avatar: number | null; color: string | null; text: string;
 };
 
 const MOCK_USERS = {
@@ -36,44 +22,104 @@ const MOCK_USERS = {
 
 const POSTS = [
   {
-    id: 1,
-    user: "Anthena",
-    location: "Sydney",
-    time: "1 hour ago",
+    id: 1, user: "Anthena", location: "Sydney", time: "1 hour ago",
     photo: require("../../assets/images/post1.jpg"),
     comments: [
-      { id: 1, user: "ian.lin",  ...MOCK_USERS.ian,     text: "So beautiful! 🌻" },
-      { id: 2, user: "mia.c",    ...MOCK_USERS.mia,     text: "Love the arrangement 😍" },
-      { id: 3, user: "Anthena",  ...MOCK_USERS.anthena, text: "Thank you both 🌸" },
+      { id: 1, user: "ian.lin", ...MOCK_USERS.ian,     text: "So beautiful! 🌻" },
+      { id: 2, user: "mia.c",   ...MOCK_USERS.mia,     text: "Love the arrangement 😍" },
+      { id: 3, user: "Anthena", ...MOCK_USERS.anthena, text: "Thank you both 🌸" },
     ] as Comment[],
   },
   {
-    id: 2,
-    user: "ian.lin",
-    location: "Melbourne",
-    time: "3 hours ago",
+    id: 2, user: "ian.lin", location: "Melbourne", time: "3 hours ago",
     photo: require("../../assets/images/post2.jpg"),
     comments: [
-      { id: 1, user: "Anthena",  ...MOCK_USERS.anthena, text: "I love this find!" },
-      { id: 2, user: "mia.c",    ...MOCK_USERS.mia,     text: "The Sunday market is the best 🛍️" },
-      { id: 3, user: "ian.lin",  ...MOCK_USERS.ian,     text: "Had to grab it haha" },
+      { id: 1, user: "Anthena", ...MOCK_USERS.anthena, text: "I love this find!" },
+      { id: 2, user: "mia.c",   ...MOCK_USERS.mia,     text: "The Sunday market is the best 🛍️" },
+      { id: 3, user: "ian.lin", ...MOCK_USERS.ian,     text: "Had to grab it haha" },
     ] as Comment[],
   },
 ];
 
-const FRIENDS = [
-  { user: "Anthena", avatar: require("../../assets/images/anthena.jpg") as number, color: null },
-  { user: "ian.lin", avatar: require("../../assets/images/ian.jpg") as number,     color: null },
-  { user: "mia.c",   avatar: null,                                                  color: "#B5C4B1" },
+const SHARE_FRIENDS = [
+  { id: "1", user: "Anthena", label: "Anthena", avatar: require("../../assets/images/anthena.jpg") as number, color: null },
+  { id: "2", user: "ian.lin", label: "ian.lin",  avatar: require("../../assets/images/ian.jpg") as number,     color: null },
+  { id: "3", user: "mia.c",   label: "mia.c",    avatar: null,                                                  color: "#B5C4B1" },
+  { id: "4", user: "ian.lin", label: "Chris",     avatar: require("../../assets/images/ian.jpg") as number,     color: null },
+  { id: "5", user: "Anthena", label: "scnr_c",    avatar: require("../../assets/images/anthena.jpg") as number, color: null },
+  { id: "6", user: "mia.c",   label: "1risyan9",  avatar: null,                                                  color: "#C4B5C1" },
+];
+
+const SHARE_APPS = [
+  { id: "1", label: "Copy link",  bg: "#e5e5ea", icon: "link" },
+  { id: "2", label: "WhatsApp",   bg: "#25d366", icon: "whatsapp" },
+  { id: "3", label: "Share to…",  bg: "#e5e5ea", icon: "share" },
+  { id: "4", label: "Messages",   bg: "#34c759", icon: "message" },
+  { id: "5", label: "Messenger",  bg: "#0084ff", icon: "messenger" },
 ];
 
 type CatState = { visible: boolean; x: number };
 
-function FriendAvatar({ avatar, color, user, size }: { avatar: number | null; color: string | null; user: string; size: number }) {
+// ─── Icons ───────────────────────────────────────────────────────────────────
+
+function IconComment() {
+  return (
+    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
+      <Path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="#fff" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  )
+}
+
+function IconSearchSm() {
+  return (
+    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+      <Circle cx={11} cy={11} r={8} stroke="#808080" strokeWidth={2} />
+      <Path d="M21 21l-4.35-4.35" stroke="#808080" strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  )
+}
+
+function IconGroupAdd() {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Circle cx={9} cy={7} r={4} stroke="#000" strokeWidth={1.5} />
+      <Path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" stroke="#000" strokeWidth={1.5} strokeLinecap="round" />
+      <Path d="M19 8v6M16 11h6" stroke="#000" strokeWidth={1.5} strokeLinecap="round" />
+    </Svg>
+  )
+}
+
+function AppIcon({ icon, bg }: { icon: string; bg: string }) {
+  const white = "#fff"
+  const sw = 1.8
+  return (
+    <View style={[styles.appIconCircle, { backgroundColor: bg }]}>
+      {icon === "link" && (
+        <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+          <Path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="#333" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
+          <Path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="#333" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
+        </Svg>
+      )}
+      {icon === "share" && (
+        <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+          <Path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" stroke="#333" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
+          <Path d="M16 6l-4-4-4 4M12 2v13" stroke="#333" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
+        </Svg>
+      )}
+      {(icon === "whatsapp" || icon === "message" || icon === "messenger") && (
+        <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+          <Path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke={white} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
+        </Svg>
+      )}
+    </View>
+  )
+}
+
+function FriendCircle({ avatar, color, user, size }: { avatar: number | null; color: string | null; user: string; size: number }) {
   if (avatar) return <Image source={avatar} style={{ width: size, height: size, borderRadius: size / 2 }} />
   return (
     <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: color ?? "#ccc", alignItems: "center", justifyContent: "center" }}>
-      <Text style={{ color: "#fff", fontSize: size * 0.4, fontWeight: "600" }}>{user[0].toUpperCase()}</Text>
+      <Text style={{ color: "#fff", fontSize: size * 0.38, fontWeight: "600" }}>{user[0].toUpperCase()}</Text>
     </View>
   )
 }
@@ -87,13 +133,7 @@ function CommentAvatar({ avatar, color, user }: { avatar: number | null; color: 
   );
 }
 
-function IconComment() {
-  return (
-    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
-      <Path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="#fff" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export default function Main() {
   const router = useRouter();
@@ -108,19 +148,26 @@ export default function Main() {
   const slideAnim = useRef(new Animated.Value(height)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // Share state
+  // Share sheet
   const [sharePostId, setSharePostId] = useState<number | null>(null);
-  const shareAnim = useRef(new Animated.Value(0)).current;
+  const [shareSearch, setShareSearch] = useState("");
+  const sheetAnim = useRef(new Animated.Value(500)).current;
+  const backdropAnim = useRef(new Animated.Value(0)).current;
 
   const openShare = (postId: number) => {
     setSharePostId(postId);
-    Animated.timing(shareAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    setShareSearch("");
+    Animated.parallel([
+      Animated.timing(backdropAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
+      Animated.spring(sheetAnim, { toValue: 0, damping: 24, stiffness: 280, useNativeDriver: true }),
+    ]).start();
   };
 
   const closeShare = () => {
-    Animated.timing(shareAnim, { toValue: 0, duration: 160, useNativeDriver: true }).start(() => {
-      setSharePostId(null);
-    });
+    Animated.parallel([
+      Animated.timing(backdropAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+      Animated.timing(sheetAnim, { toValue: 500, duration: 200, useNativeDriver: true }),
+    ]).start(() => setSharePostId(null));
   };
 
   const sendPost = (friendUser: string) => {
@@ -128,9 +175,10 @@ export default function Main() {
     closeShare();
     setTimeout(() => {
       router.push({ pathname: "/chat", params: { user: friendUser, sharedPostId: String(postId) } });
-    }, 180);
+    }, 200);
   };
 
+  // Comment sheet
   const openComment = (postId: number) => {
     setOpenPostId(postId);
     Animated.parallel([
@@ -171,6 +219,10 @@ export default function Main() {
 
   const openPost = POSTS.find((p) => p.id === openPostId) ?? null;
 
+  const filteredFriends = SHARE_FRIENDS.filter(f =>
+    f.label.toLowerCase().includes(shareSearch.toLowerCase())
+  );
+
   return (
     <View style={styles.page}>
       <ScrollView style={styles.feed} contentContainerStyle={styles.feedContent} showsVerticalScrollIndicator={false}>
@@ -195,7 +247,6 @@ export default function Main() {
               {cats[post.id]?.visible && (
                 <Image source={require("../../assets/images/cat.png")} style={[styles.catSticker, { left: cats[post.id].x }]} />
               )}
-
               <Pressable
                 onPress={() => handlePhotoPress(post.id)}
                 onLongPress={() => openShare(post.id)}
@@ -204,50 +255,81 @@ export default function Main() {
               >
                 <Image source={post.photo} style={styles.photoImg} resizeMode="cover" />
               </Pressable>
-
               {iconVisible[post.id] && (
                 <Pressable style={styles.commentIconBtn} onPress={() => openComment(post.id)}>
                   <IconComment />
                 </Pressable>
-              )}
-
-              {/* Share overlay — only on this post */}
-              {sharePostId === post.id && (
-                <Animated.View style={[StyleSheet.absoluteFill, { opacity: shareAnim }]}>
-                  {/* dark backdrop */}
-                  <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.45)" }]} onPress={closeShare} />
-
-                  {/* friend picker card */}
-                  <Animated.View
-                    style={[
-                      styles.friendPickerCard,
-                      {
-                        transform: [{
-                          translateY: shareAnim.interpolate({ inputRange: [0, 1], outputRange: [60, 0] }),
-                        }],
-                      },
-                    ]}
-                  >
-                    <Text style={styles.friendPickerLabel}>傳送給</Text>
-                    <View style={styles.friendRow}>
-                      {FRIENDS.map((f) => (
-                        <Pressable key={f.user} style={styles.friendItem} onPress={() => sendPost(f.user)}>
-                          <View style={styles.friendAvatarRing}>
-                            <FriendAvatar avatar={f.avatar} color={f.color} user={f.user} size={52} />
-                          </View>
-                          <Text style={styles.friendName} numberOfLines={1}>{f.user}</Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                  </Animated.View>
-                </Animated.View>
               )}
             </View>
           </View>
         ))}
       </ScrollView>
 
-      {/* Comment sheet */}
+      {/* ── Share sheet modal ── */}
+      <Modal visible={sharePostId !== null} transparent animationType="none" onRequestClose={closeShare}>
+        <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+          {/* backdrop */}
+          <Animated.View style={[StyleSheet.absoluteFill, styles.shareBackdrop, { opacity: backdropAnim }]}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={closeShare} />
+          </Animated.View>
+
+          {/* sheet */}
+          <Animated.View style={[styles.shareSheet, { transform: [{ translateY: sheetAnim }] }]}>
+            <View style={styles.shareHandle} />
+
+            {/* Search row */}
+            <View style={styles.shareSearchRow}>
+              <View style={styles.shareSearchBar}>
+                <IconSearchSm />
+                <TextInput
+                  style={styles.shareSearchInput}
+                  placeholder="Search"
+                  placeholderTextColor="#808080"
+                  value={shareSearch}
+                  onChangeText={setShareSearch}
+                />
+              </View>
+              <View style={styles.shareGroupBtn}>
+                <IconGroupAdd />
+              </View>
+            </View>
+
+            {/* Friends grid */}
+            <FlatList
+              data={filteredFriends}
+              keyExtractor={f => f.id}
+              numColumns={3}
+              scrollEnabled={false}
+              contentContainerStyle={styles.friendGrid}
+              columnWrapperStyle={styles.friendGridRow}
+              renderItem={({ item }) => (
+                <Pressable style={styles.friendCell} onPress={() => sendPost(item.user)}>
+                  <FriendCircle avatar={item.avatar} color={item.color} user={item.user} size={72} />
+                  <Text style={styles.friendCellName} numberOfLines={1}>{item.label}</Text>
+                </Pressable>
+              )}
+            />
+
+            <View style={styles.shareDivider} />
+
+            {/* App share row */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.appShareRow}
+            >
+              {SHARE_APPS.map(app => (
+                <View key={app.id} style={styles.appItem}>
+                  <AppIcon icon={app.icon} bg={app.bg} />
+                  <Text style={styles.appLabel}>{app.label}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          </Animated.View>
+        </View>
+      </Modal>
+
+      {/* ── Comment sheet modal ── */}
       <Modal visible={openPostId !== null} transparent animationType="none" onRequestClose={closeComment}>
         <Animated.View style={[styles.modalContainer, { opacity: fadeAnim }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={closeComment} />
@@ -285,6 +367,8 @@ export default function Main() {
   );
 }
 
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: "#fff" },
   feed: { flex: 1 },
@@ -299,59 +383,62 @@ const styles = StyleSheet.create({
   commentIconBtn: { position: "absolute", bottom: 12, right: 12, width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   meta: { fontSize: 13, color: "rgba(0,0,0,0.5)", alignSelf: "flex-start" },
 
-  // Friend picker
-  friendPickerCard: {
+  // ── Share sheet ──
+  shareBackdrop: { backgroundColor: "rgba(0,0,0,0.55)" },
+  shareSheet: {
     position: "absolute",
-    bottom: 20,
-    left: 16,
-    right: 16,
-    backgroundColor: "rgba(255,255,255,0.96)",
-    borderRadius: 20,
-    paddingTop: 14,
-    paddingBottom: 18,
-    paddingHorizontal: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: Platform.OS === "ios" ? 34 : 20,
   },
-  friendPickerLabel: {
-    fontFamily: "GCPrometheusDemo-Regular",
-    fontSize: 13,
-    color: "#999",
-    textAlign: "center",
-    marginBottom: 12,
-    letterSpacing: 0.5,
+  shareHandle: {
+    width: 36, height: 4, backgroundColor: "#d0d0d0", borderRadius: 2,
+    alignSelf: "center", marginTop: 10, marginBottom: 14,
   },
-  friendRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    paddingHorizontal: 8,
+  shareSearchRow: {
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 16, gap: 10, marginBottom: 20,
   },
-  friendItem: { alignItems: "center", gap: 6 },
-  friendAvatarRing: {
-    borderRadius: 30,
-    borderWidth: 2,
-    borderColor: "#e0e0e0",
-    padding: 2,
+  shareSearchBar: {
+    flex: 1, flexDirection: "row", alignItems: "center",
+    backgroundColor: "#f0f0f0", borderRadius: 50,
+    paddingHorizontal: 14, height: 42, gap: 8,
   },
-  friendName: {
-    fontFamily: "PublicSans-Regular",
-    fontSize: 11,
-    color: "#333",
-    maxWidth: 64,
-    textAlign: "center",
+  shareSearchInput: {
+    flex: 1, fontFamily: "PublicSans-Regular", fontSize: 16, color: "#000",
+  },
+  shareGroupBtn: {
+    width: 42, height: 42, borderRadius: 21,
+    backgroundColor: "#f0f0f0",
+    alignItems: "center", justifyContent: "center",
   },
 
-  // Comment modal
+  // Friends grid
+  friendGrid: { paddingHorizontal: 8 },
+  friendGridRow: { justifyContent: "space-around", marginBottom: 16 },
+  friendCell: { alignItems: "center", gap: 6, width: (width - 32) / 3 },
+  friendCellName: {
+    fontFamily: "PublicSans-Regular", fontSize: 12, color: "#000",
+    maxWidth: 80, textAlign: "center",
+  },
+
+  shareDivider: { height: StyleSheet.hairlineWidth, backgroundColor: "#e0e0e0", marginHorizontal: 16, marginBottom: 16 },
+
+  // App share row
+  appShareRow: { paddingHorizontal: 16, gap: 16 },
+  appItem: { alignItems: "center", gap: 6 },
+  appIconCircle: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center" },
+  appLabel: { fontFamily: "PublicSans-Regular", fontSize: 11, color: "#000", textAlign: "center", maxWidth: 60 },
+
+  // ── Comment modal ──
   modalContainer: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.35)" },
   sheet: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    height: height * 0.65,
-    paddingBottom: Platform.OS === "ios" ? 34 : 16,
+    backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    height: height * 0.65, paddingBottom: Platform.OS === "ios" ? 34 : 16,
   },
   sheetHandle: { width: 36, height: 4, backgroundColor: "#e0e0e0", borderRadius: 2, alignSelf: "center", marginTop: 10, marginBottom: 4 },
   sheetTitle: { fontFamily: "GCPrometheusDemo-Regular", fontSize: 18, color: "#000", textAlign: "center", paddingVertical: 12 },

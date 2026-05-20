@@ -97,11 +97,11 @@ export default function Chat() {
       return (
         <View style={[styles.row, styles.rowMe]}>
           <View style={styles.postBubble}>
-            <Image source={post.photo} style={styles.postBubblePhoto} resizeMode="cover" />
-            <View style={styles.postBubbleFooter}>
-              <Avatar user={post.user} size={20} />
+            <View style={styles.postBubbleHeader}>
+              <Avatar user={post.user} size={22} />
               <Text style={styles.postBubbleUser}>{post.user}</Text>
             </View>
+            <Image source={post.photo} style={styles.postBubblePhoto} resizeMode="cover" />
           </View>
         </View>
       )
@@ -189,16 +189,16 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#f0f0f0',
   },
-  postBubblePhoto: {
-    width: '100%',
-    aspectRatio: 4 / 3,
-  },
-  postBubbleFooter: {
+  postBubbleHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 8,
+  },
+  postBubblePhoto: {
+    width: '100%',
+    height: 200,
   },
   postBubbleUser: {
     fontFamily: 'PublicSans-Regular',

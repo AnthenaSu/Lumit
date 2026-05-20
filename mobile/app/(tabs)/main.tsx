@@ -3,8 +3,10 @@ import { useRouter } from "expo-router";
 import {
   View, Text, ScrollView, Pressable, StyleSheet, Dimensions,
   Image, Modal, TextInput, KeyboardAvoidingView, Platform, Animated, FlatList,
+  Share, Linking,
 } from "react-native";
-import Svg, { Path, Circle, Rect, Line } from "react-native-svg";
+import Svg, { Path, Circle } from "react-native-svg";
+import * as Clipboard from "expo-clipboard";
 
 const { width, height } = Dimensions.get("window");
 const photoWidth = width;
@@ -52,10 +54,8 @@ const SHARE_FRIENDS = [
 
 const SHARE_APPS = [
   { id: "1", label: "Copy link",  bg: "#e5e5ea", icon: "link" },
-  { id: "2", label: "WhatsApp",   bg: "#25d366", icon: "whatsapp" },
+  { id: "2", label: "Instagram",  bg: "#000",    icon: "instagram" },
   { id: "3", label: "Share to…",  bg: "#e5e5ea", icon: "share" },
-  { id: "4", label: "Messages",   bg: "#34c759", icon: "message" },
-  { id: "5", label: "Messenger",  bg: "#0084ff", icon: "messenger" },
 ];
 
 type CatState = { visible: boolean; x: number };
@@ -90,25 +90,27 @@ function IconGroupAdd() {
 }
 
 function AppIcon({ icon, bg }: { icon: string; bg: string }) {
-  const white = "#fff"
   const sw = 1.8
+  const stroke = bg === "#e5e5ea" ? "#333" : "#fff"
   return (
     <View style={[styles.appIconCircle, { backgroundColor: bg }]}>
       {icon === "link" && (
         <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-          <Path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="#333" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
-          <Path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="#333" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
+          <Path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
+          <Path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
         </Svg>
       )}
       {icon === "share" && (
         <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-          <Path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" stroke="#333" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
-          <Path d="M16 6l-4-4-4 4M12 2v13" stroke="#333" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
+          <Path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
+          <Path d="M16 6l-4-4-4 4M12 2v13" stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
         </Svg>
       )}
-      {(icon === "whatsapp" || icon === "message" || icon === "messenger") && (
+      {icon === "instagram" && (
         <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-          <Path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke={white} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
+          <Circle cx={12} cy={12} r={5} stroke="#fff" strokeWidth={sw} />
+          <Path d="M17.5 3h-11A3.5 3.5 0 0 0 3 6.5v11A3.5 3.5 0 0 0 6.5 21h11a3.5 3.5 0 0 0 3.5-3.5v-11A3.5 3.5 0 0 0 17.5 3z" stroke="#fff" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
+          <Circle cx={18} cy={6} r={1} fill="#fff" />
         </Svg>
       )}
     </View>
@@ -116,9 +118,10 @@ function AppIcon({ icon, bg }: { icon: string; bg: string }) {
 }
 
 function FriendCircle({ avatar, color, user, size }: { avatar: number | null; color: string | null; user: string; size: number }) {
-  if (avatar) return <Image source={avatar} style={{ width: size, height: size, borderRadius: size / 2 }} />
+  const sq = { width: size, height: size, borderRadius: 15 }
+  if (avatar) return <Image source={avatar} style={sq} />
   return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: color ?? "#ccc", alignItems: "center", justifyContent: "center" }}>
+    <View style={[sq, { backgroundColor: color ?? "#ccc", alignItems: "center", justifyContent: "center" }]}>
       <Text style={{ color: "#fff", fontSize: size * 0.38, fontWeight: "600" }}>{user[0].toUpperCase()}</Text>
     </View>
   )
@@ -151,12 +154,15 @@ export default function Main() {
   // Share sheet
   const [sharePostId, setSharePostId] = useState<number | null>(null);
   const [shareSearch, setShareSearch] = useState("");
+  const [pendingFriend, setPendingFriend] = useState<typeof SHARE_FRIENDS[0] | null>(null);
+  const [copied, setCopied] = useState(false);
   const sheetAnim = useRef(new Animated.Value(500)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
 
   const openShare = (postId: number) => {
     setSharePostId(postId);
     setShareSearch("");
+    setPendingFriend(null);
     Animated.parallel([
       Animated.timing(backdropAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
       Animated.spring(sheetAnim, { toValue: 0, damping: 24, stiffness: 280, useNativeDriver: true }),
@@ -167,15 +173,36 @@ export default function Main() {
     Animated.parallel([
       Animated.timing(backdropAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
       Animated.timing(sheetAnim, { toValue: 500, duration: 200, useNativeDriver: true }),
-    ]).start(() => setSharePostId(null));
+    ]).start(() => { setSharePostId(null); setPendingFriend(null); });
   };
 
-  const sendPost = (friendUser: string) => {
+  const confirmSend = () => {
+    if (!pendingFriend) return;
     const postId = sharePostId;
+    const friendUser = pendingFriend.user;
     closeShare();
     setTimeout(() => {
       router.push({ pathname: "/chat", params: { user: friendUser, sharedPostId: String(postId) } });
     }, 200);
+  };
+
+  const handleCopyLink = async () => {
+    await Clipboard.setStringAsync(`https://lumit.app/post/${sharePostId}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  const handleInstagram = async () => {
+    const canOpen = await Linking.canOpenURL("instagram://app");
+    if (canOpen) {
+      Linking.openURL("instagram://app");
+    } else {
+      Linking.openURL("https://www.instagram.com");
+    }
+  };
+
+  const handleShareTo = async () => {
+    await Share.share({ message: `Check out this post on Lumit 🌿 lumit.app/post/${sharePostId}` });
   };
 
   // Comment sheet
@@ -294,37 +321,58 @@ export default function Main() {
               </View>
             </View>
 
-            {/* Friends grid */}
-            <FlatList
-              data={filteredFriends}
-              keyExtractor={f => f.id}
-              numColumns={3}
-              scrollEnabled={false}
-              contentContainerStyle={styles.friendGrid}
-              columnWrapperStyle={styles.friendGridRow}
-              renderItem={({ item }) => (
-                <Pressable style={styles.friendCell} onPress={() => sendPost(item.user)}>
-                  <FriendCircle avatar={item.avatar} color={item.color} user={item.user} size={72} />
-                  <Text style={styles.friendCellName} numberOfLines={1}>{item.label}</Text>
-                </Pressable>
-              )}
-            />
-
-            <View style={styles.shareDivider} />
-
-            {/* App share row */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.appShareRow}
-            >
-              {SHARE_APPS.map(app => (
-                <View key={app.id} style={styles.appItem}>
-                  <AppIcon icon={app.icon} bg={app.bg} />
-                  <Text style={styles.appLabel}>{app.label}</Text>
+            {pendingFriend ? (
+              /* ── Confirmation view ── */
+              <View style={styles.confirmView}>
+                <FriendCircle avatar={pendingFriend.avatar} color={pendingFriend.color} user={pendingFriend.user} size={72} />
+                <Text style={styles.confirmText}>傳送給</Text>
+                <Text style={styles.confirmName}>{pendingFriend.label}</Text>
+                <View style={styles.confirmBtns}>
+                  <Pressable style={styles.confirmCancel} onPress={() => setPendingFriend(null)}>
+                    <Text style={styles.confirmCancelText}>取消</Text>
+                  </Pressable>
+                  <Pressable style={styles.confirmSend} onPress={confirmSend}>
+                    <Text style={styles.confirmSendText}>確認傳送</Text>
+                  </Pressable>
                 </View>
-              ))}
-            </ScrollView>
+              </View>
+            ) : (
+              <>
+                {/* Friends grid */}
+                <FlatList
+                  data={filteredFriends}
+                  keyExtractor={f => f.id}
+                  numColumns={3}
+                  scrollEnabled={false}
+                  contentContainerStyle={styles.friendGrid}
+                  columnWrapperStyle={styles.friendGridRow}
+                  renderItem={({ item }) => (
+                    <Pressable style={styles.friendCell} onPress={() => setPendingFriend(item)}>
+                      <FriendCircle avatar={item.avatar} color={item.color} user={item.user} size={72} />
+                      <Text style={styles.friendCellName} numberOfLines={1}>{item.label}</Text>
+                    </Pressable>
+                  )}
+                />
+
+                <View style={styles.shareDivider} />
+
+                {/* App share row */}
+                <View style={styles.appShareRow}>
+                  <Pressable style={styles.appItem} onPress={handleCopyLink}>
+                    <AppIcon icon="link" bg="#e5e5ea" />
+                    <Text style={styles.appLabel}>{copied ? "已複製！" : "Copy link"}</Text>
+                  </Pressable>
+                  <Pressable style={styles.appItem} onPress={handleInstagram}>
+                    <AppIcon icon="instagram" bg="#000" />
+                    <Text style={styles.appLabel}>Instagram</Text>
+                  </Pressable>
+                  <Pressable style={styles.appItem} onPress={handleShareTo}>
+                    <AppIcon icon="share" bg="#e5e5ea" />
+                    <Text style={styles.appLabel}>Share to…</Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
           </Animated.View>
         </View>
       </Modal>
@@ -429,10 +477,67 @@ const styles = StyleSheet.create({
   shareDivider: { height: StyleSheet.hairlineWidth, backgroundColor: "#e0e0e0", marginHorizontal: 16, marginBottom: 16 },
 
   // App share row
-  appShareRow: { paddingHorizontal: 16, gap: 16 },
+  appShareRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    paddingHorizontal: 24,
+    paddingBottom: 8,
+  },
   appItem: { alignItems: "center", gap: 6 },
   appIconCircle: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center" },
-  appLabel: { fontFamily: "PublicSans-Regular", fontSize: 11, color: "#000", textAlign: "center", maxWidth: 60 },
+  appLabel: { fontFamily: "PublicSans-Regular", fontSize: 11, color: "#000", textAlign: "center", maxWidth: 64 },
+
+  // Confirmation view
+  confirmView: {
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    gap: 6,
+  },
+  confirmText: {
+    fontFamily: "PublicSans-Regular",
+    fontSize: 13,
+    color: "#999",
+    marginTop: 12,
+  },
+  confirmName: {
+    fontFamily: "PublicSans-Regular",
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#000",
+    marginBottom: 20,
+  },
+  confirmBtns: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+  },
+  confirmCancel: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "#f0f0f0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmCancelText: {
+    fontFamily: "PublicSans-Regular",
+    fontSize: 16,
+    color: "#333",
+  },
+  confirmSend: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "#000",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmSendText: {
+    fontFamily: "PublicSans-Regular",
+    fontSize: 16,
+    color: "#fff",
+  },
 
   // ── Comment modal ──
   modalContainer: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.35)" },

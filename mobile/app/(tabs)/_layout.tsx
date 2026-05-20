@@ -45,7 +45,16 @@ function IconUser() {
   )
 }
 
-function CustomTabBar({ navigation }: BottomTabBarProps) {
+function IconPlus() {
+  return (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 5v14M5 12h14" stroke="#000" strokeWidth={1.5} strokeLinecap="round" />
+    </Svg>
+  )
+}
+
+function CustomTabBar({ navigation, state }: BottomTabBarProps) {
+  const activeTab = state.routes[state.index]?.name
   const { visible } = useContext(TabBarVisibilityContext)
   if (!visible) return null
 
@@ -67,7 +76,7 @@ function CustomTabBar({ navigation }: BottomTabBarProps) {
             <IconSend />
           </Pressable>
           <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
-            <Text style={styles.navBtnTText}>T</Text>
+            <Text style={styles.navBtnTText}>W</Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}
@@ -79,7 +88,7 @@ function CustomTabBar({ navigation }: BottomTabBarProps) {
             style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}
             onPress={() => navigation.navigate('profile')}
           >
-            <IconUser />
+            {activeTab === 'profile' ? <IconPlus /> : <IconUser />}
           </Pressable>
         </BlurView>
       </View>

@@ -380,22 +380,21 @@ export default function Main() {
               </Pressable>
             </View>
 
-            {/* Send bar — always rendered to avoid height jump, opacity toggles */}
-            <View
-              style={[styles.sendBar, { opacity: selectedFriend ? 1 : 0 }]}
-              pointerEvents={selectedFriend ? "auto" : "none"}
-            >
-              <TextInput
-                style={styles.sendMsgInput}
-                placeholder="Write a message..."
-                placeholderTextColor="#aaa"
-                value={sendMessage}
-                onChangeText={setSendMessage}
-              />
-              <Pressable style={styles.sendBtn} onPress={confirmSend}>
-                <Text style={styles.sendBtnText}>Send</Text>
-              </Pressable>
-            </View>
+            {/* Send bar — absolutely positioned, overlays the app row when a friend is selected */}
+            {selectedFriend && (
+              <View style={styles.sendBar}>
+                <TextInput
+                  style={styles.sendMsgInput}
+                  placeholder="Write a message..."
+                  placeholderTextColor="#aaa"
+                  value={sendMessage}
+                  onChangeText={setSendMessage}
+                />
+                <Pressable style={styles.sendBtn} onPress={confirmSend}>
+                  <Text style={styles.sendBtnText}>Send</Text>
+                </Pressable>
+              </View>
+            )}
           </Animated.View>
         </View>
       </Modal>
@@ -465,6 +464,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingBottom: Platform.OS === "ios" ? 34 : 20,
+    overflow: "hidden",
   },
   shareHandle: {
     width: 36, height: 4, backgroundColor: "#d0d0d0", borderRadius: 2,
@@ -529,15 +529,19 @@ const styles = StyleSheet.create({
     borderColor: "#fff",
   },
 
-  // Send bar
+  // Send bar — overlays the app buttons row
   sendBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: Platform.OS === "ios" ? 4 : 8,
+    paddingTop: 14,
+    paddingBottom: Platform.OS === "ios" ? 34 : 20,
     gap: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "#e0e0e0",
-    marginTop: 4,
   },
   sendMsgInput: {
     height: 44,

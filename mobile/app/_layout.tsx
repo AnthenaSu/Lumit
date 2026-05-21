@@ -37,7 +37,7 @@ export default function RootLayout() {
         <Stack.Screen name="chat" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="search-history" options={{ animation: 'fade' }} />
         <Stack.Screen name="new-post" options={{ animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="new-post-individual" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="new-post-individual" options={{ presentation: 'transparentModal', animation: 'none' }} />
       </Stack>
     </>
   )

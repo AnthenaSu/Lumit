@@ -3,9 +3,12 @@ import {
   View, Text, Image, ScrollView, Pressable, StyleSheet,
   Modal, TextInput, FlatList, Dimensions, Animated, Easing,
 } from 'react-native'
+import { useRouter } from 'expo-router'
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window')
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
 const GRID_GAP = 2
+const CELL_WIDTH = (SCREEN_WIDTH - GRID_GAP * 2) / 3
+const CELL_HEIGHT = CELL_WIDTH * (160 / 120)
 
 const GRID_ROWS = [
   [
@@ -45,6 +48,7 @@ const FOLLOWERS_LIST: FollowUser[] = [
 ]
 
 export default function Profile() {
+  const router = useRouter()
   const [followModal, setFollowModal] = useState(false)
   const [followTab, setFollowTab] = useState<'following' | 'followers'>('following')
   const [followSearch, setFollowSearch] = useState('')
@@ -121,12 +125,17 @@ export default function Profile() {
         {GRID_ROWS.map((row, rowIdx) => (
           <View key={rowIdx} style={styles.gridRow}>
             {row.map((src, colIdx) => (
-              <Image
+              <Pressable
                 key={colIdx}
-                source={src}
                 style={[styles.gridItem, colIdx < 2 && { marginRight: GRID_GAP }]}
-                resizeMode="cover"
-              />
+                onPress={() => router.push({ pathname: '/post', params: { idx: rowIdx * 3 + colIdx } })}
+              >
+                <Image
+                  source={src}
+                  style={{ width: CELL_WIDTH, height: CELL_HEIGHT }}
+                  resizeMode="cover"
+                />
+              </Pressable>
             ))}
           </View>
         ))}
@@ -220,7 +229,7 @@ const styles = StyleSheet.create({
   },
   pillBtnText: { fontFamily: 'CormorantSC-SemiBold', fontSize: 18, color: '#000' },
   gridRow: { flexDirection: 'row', marginBottom: GRID_GAP },
-  gridItem: { flex: 1, aspectRatio: 120 / 160 },
+  gridItem: { width: CELL_WIDTH, height: CELL_HEIGHT, backgroundColor: '#f5f5f5' },
 
   // ── Modal ──
   modalBackdrop: {

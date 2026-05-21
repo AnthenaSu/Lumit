@@ -4,7 +4,7 @@ import {
   StyleSheet, Dimensions, ScrollView,
 } from 'react-native'
 import { useRouter, useLocalSearchParams } from 'expo-router'
-import { newPostStore } from './new-post-store'
+import { newPostStore } from '../new-post-store'
 
 const { width } = Dimensions.get('window')
 const H_MARGIN = 26

@@ -5,7 +5,7 @@ import {
 } from 'react-native'
 import { useRouter, useNavigation } from 'expo-router'
 import * as MediaLibrary from 'expo-media-library'
-import { newPostStore } from './new-post-store'
+import { newPostStore } from '../new-post-store'
 
 const { width } = Dimensions.get('window')
 const GRID_MARGIN = 30

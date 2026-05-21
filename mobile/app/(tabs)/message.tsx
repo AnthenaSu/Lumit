@@ -50,28 +50,30 @@ export default function Message() {
 
   return (
     <View style={styles.page}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Message</Text>
-        <Pressable style={styles.editBtn}>
-          <IconEdit />
-        </Pressable>
-      </View>
-
-      <View style={styles.searchBar}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search for someone"
-          placeholderTextColor="#b3b3b3"
-          value={search}
-          onChangeText={setSearch}
-        />
-      </View>
-
       <FlatList
         data={filtered}
         keyExtractor={item => String(item.id)}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <>
+            <View style={styles.header}>
+              <Text style={styles.title}>Message</Text>
+              <Pressable style={styles.editBtn}>
+                <IconEdit />
+              </Pressable>
+            </View>
+            <View style={styles.searchBar}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search for someone"
+                placeholderTextColor="#b3b3b3"
+                value={search}
+                onChangeText={setSearch}
+              />
+            </View>
+          </>
+        }
         renderItem={({ item }) => (
           <Pressable
             style={styles.row}
@@ -97,6 +99,7 @@ const styles = StyleSheet.create({
     paddingTop: 90,
     paddingHorizontal: 16,
     paddingBottom: 12,
+    backgroundColor: '#fff',
   },
   title: {
     fontFamily: 'GCPrometheusDemo-SemiBold',
@@ -119,7 +122,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#000',
   },
-  list: { paddingHorizontal: 16, paddingBottom: 110 },
+  list: { paddingHorizontal: 16, paddingBottom: 110, flexGrow: 1 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

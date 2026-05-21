@@ -1,5 +1,5 @@
 import { createContext, useContext, useState } from 'react'
-import { Tabs } from 'expo-router'
+import { Tabs, useRouter } from 'expo-router'
 import { View, Pressable, Text, StyleSheet, DeviceEventEmitter } from 'react-native'
 import { BlurView } from 'expo-blur'
 import Svg, { Path, Circle } from 'react-native-svg'
@@ -54,6 +54,7 @@ function IconPlus() {
 }
 
 function CustomTabBar({ navigation, state }: BottomTabBarProps) {
+  const router = useRouter()
   const activeTab = state.routes[state.index]?.name
   const { visible } = useContext(TabBarVisibilityContext)
   if (!visible) return null
@@ -92,7 +93,13 @@ function CustomTabBar({ navigation, state }: BottomTabBarProps) {
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}
-            onPress={() => navigation.navigate('profile')}
+            onPress={() => {
+              if (activeTab === 'profile') {
+                router.push('/new-post')
+              } else {
+                navigation.navigate('profile')
+              }
+            }}
           >
             {activeTab === 'profile' ? <IconPlus /> : <IconUser />}
           </Pressable>

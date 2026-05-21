@@ -481,10 +481,7 @@ const nStyles = StyleSheet.create({
 
 export default function Main() {
   const router = useRouter();
-<<<<<<< HEAD
   const pagerRef = useRef<ScrollView>(null);
-=======
->>>>>>> f35c5a9 (user profile + others profile)
   const [cats, setCats] = useState<Record<number, CatState>>({});
   const [iconVisible, setIconVisible] = useState<Record<number, boolean>>({});
   const lastTap = useRef<Record<number, number>>({});
@@ -712,20 +709,21 @@ export default function Main() {
               <Text style={styles.brand}>Lumit</Text>
             </View>
 
-<<<<<<< HEAD
             {POSTS.map((post) => (
               <View key={post.id} style={styles.post}>
                 <View style={styles.postHeader}>
                   <View>
-                    <Text
-                      style={styles.username}
-                      onLayout={(e) => {
-                        usernameWidths.current[post.id] =
-                          e.nativeEvent.layout.width;
-                      }}
-                    >
-                      {post.user}
-                    </Text>
+                    <Pressable onPress={() => router.push({ pathname: '/user-profile', params: { user: post.user } })}>
+                      <Text
+                        style={styles.username}
+                        onLayout={(e) => {
+                          usernameWidths.current[post.id] =
+                            e.nativeEvent.layout.width;
+                        }}
+                      >
+                        {post.user}
+                      </Text>
+                    </Pressable>
                     <Text
                       style={styles.meta}
                       onLayout={(e) => {
@@ -772,30 +770,6 @@ export default function Main() {
                     </Pressable>
                   )}
                 </View>
-=======
-        {POSTS.map((post) => (
-          <View key={post.id} style={styles.post}>
-            <View style={styles.postHeader}>
-              <View>
-                <Pressable onPress={() => router.push({ pathname: '/user-profile', params: { user: post.user } })}>
-                  <Text
-                    style={styles.username}
-                    onLayout={(e) => {
-                      usernameWidths.current[post.id] = e.nativeEvent.layout.width;
-                    }}
-                  >
-                    {post.user}
-                  </Text>
-                </Pressable>
-                <Text
-                  style={styles.meta}
-                  onLayout={(e) => {
-                    metaWidths.current[post.id] = e.nativeEvent.layout.width;
-                  }}
-                >
-                  {post.location} · {post.time}
-                </Text>
->>>>>>> f35c5a9 (user profile + others profile)
               </View>
             ))}
           </ScrollView>
@@ -1223,7 +1197,6 @@ const styles = StyleSheet.create({
   },
   commentList: { flex: 1 },
   commentListContent: { paddingHorizontal: 20, paddingBottom: 8 },
-<<<<<<< HEAD
   commentRow: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -1231,10 +1204,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   commentAvatar: { width: 40, height: 40, borderRadius: 20 },
-=======
-  commentRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 20, gap: 12 },
-  commentAvatar: { width: 40, height: 40, borderRadius: 15 },
->>>>>>> f35c5a9 (user profile + others profile)
   commentAvatarPlaceholder: { alignItems: "center", justifyContent: "center" },
   commentAvatarInitial: { fontSize: 16, color: "#fff", fontWeight: "600" },
   commentBody: { flex: 1, gap: 2 },

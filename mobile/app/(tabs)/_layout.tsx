@@ -1,6 +1,6 @@
 import { createContext, useContext, useState } from 'react'
 import { Tabs } from 'expo-router'
-import { View, Pressable, Text, StyleSheet } from 'react-native'
+import { View, Pressable, Text, StyleSheet, DeviceEventEmitter } from 'react-native'
 import { BlurView } from 'expo-blur'
 import Svg, { Path, Circle } from 'react-native-svg'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
@@ -65,7 +65,10 @@ function CustomTabBar({ navigation, state }: BottomTabBarProps) {
           <View style={styles.navPillGlass} pointerEvents="none" />
           <Pressable
             style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}
-            onPress={() => navigation.navigate('main')}
+            onPress={() => {
+              navigation.navigate('main')
+              DeviceEventEmitter.emit('resetMainPager')
+            }}
           >
             <IconHome />
           </Pressable>
@@ -75,7 +78,10 @@ function CustomTabBar({ navigation, state }: BottomTabBarProps) {
           >
             <IconSend />
           </Pressable>
-          <Pressable style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}>
+          <Pressable
+            style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.5 }]}
+            onPress={() => navigation.navigate('weekly')}
+          >
             <Text style={styles.navBtnTText}>W</Text>
           </Pressable>
           <Pressable
@@ -107,6 +113,7 @@ export default function TabsLayout() {
       >
         <Tabs.Screen name="main" />
         <Tabs.Screen name="message" />
+        <Tabs.Screen name="weekly" />
         <Tabs.Screen name="search" />
         <Tabs.Screen name="profile" />
       </Tabs>

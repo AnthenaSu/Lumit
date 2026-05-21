@@ -24,6 +24,7 @@ const POST_DATA: Record<number, { user: string; photo: number }> = {
 type Message =
   | { id: number; from: 'me' | 'other'; type: 'text'; text: string }
   | { id: number; from: 'me'; type: 'post'; postId: number }
+  | { id: number; type: 'timestamp'; label: string }
 
 function Avatar({ user, size = 40 }: { user: string; size?: number }) {
   const avatar = AVATARS[user]
@@ -69,6 +70,7 @@ export default function Chat() {
 
   const [messages, setMessages] = useState<Message[]>(() => {
     const initial: Message[] = [
+      { id: 0, type: 'timestamp', label: 'Today' },
       { id: 1, from: 'other', type: 'text', text: 'Hi' },
       { id: 2, from: 'me',    type: 'text', text: 'Hi' },
     ]
@@ -89,6 +91,14 @@ export default function Chat() {
   }
 
   const renderMessage = ({ item }: { item: Message }) => {
+    if (item.type === 'timestamp') {
+      return (
+        <View style={styles.timestampRow}>
+          <Text style={styles.timestampText}>{item.label}</Text>
+        </View>
+      )
+    }
+
     const isMe = item.from === 'me'
 
     if (item.type === 'post') {
@@ -111,7 +121,7 @@ export default function Chat() {
       <View style={[styles.row, isMe ? styles.rowMe : styles.rowOther]}>
         {!isMe && <Avatar user={user} />}
         <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
-          <Text style={styles.bubbleText}>{item.text}</Text>
+          <Text style={[styles.bubbleText, isMe ? styles.bubbleTextMe : styles.bubbleTextOther]}>{item.text}</Text>
         </View>
       </View>
     )
@@ -143,7 +153,7 @@ export default function Chat() {
       <View style={styles.inputBar}>
         <TextInput
           style={styles.input}
-          placeholder="send a message"
+          placeholder="Send a message..."
           placeholderTextColor="#808080"
           value={input}
           onChangeText={setInput}
@@ -177,10 +187,14 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
   rowMe: { justifyContent: 'flex-end' },
   rowOther: { justifyContent: 'flex-start' },
-  bubble: { maxWidth: width * 0.65, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18 },
-  bubbleMe: { backgroundColor: '#e5e5ea' },
-  bubbleOther: { backgroundColor: '#f0f0f0' },
-  bubbleText: { fontFamily: 'PublicSans-Regular', fontSize: 16, color: '#000' },
+  bubble: { maxWidth: width * 0.65, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20 },
+  bubbleMe: { backgroundColor: '#1c1c1e' },
+  bubbleOther: { backgroundColor: '#e5e5ea' },
+  bubbleText: { fontFamily: 'PublicSans-Regular', fontSize: 16 },
+  bubbleTextMe: { color: '#fff' },
+  bubbleTextOther: { color: '#000' },
+  timestampRow: { alignItems: 'center', marginVertical: 8 },
+  timestampText: { fontFamily: 'PublicSans-Regular', fontSize: 12, color: '#808080' },
 
   // Shared post bubble
   postBubble: {

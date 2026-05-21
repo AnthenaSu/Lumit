@@ -12,11 +12,55 @@ const GRID_MARGIN = 30
 const GRID_GAP = 2
 const SLOT_WIDTH  = Math.floor((width - GRID_MARGIN * 2 - GRID_GAP * 2) / 3)
 const SLOT_HEIGHT = Math.floor(SLOT_WIDTH * 1.6)
-const ITEM_WIDTH  = Math.floor((width - GRID_GAP * 2) / 3)  // edge-to-edge grid
+const ITEM_WIDTH  = Math.floor((width - GRID_GAP * 2) / 3)
 const ITEM_HEIGHT = Math.floor(ITEM_WIDTH * 140 / 112)
-const MAX_PHOTOS = 9
+const MAX_PHOTOS = 10
+const THUMB = 72
 
-// Lazily resolve ph:// → file:// per visible item
+type Category = { id: string; label: string; album?: MediaLibrary.Album }
+
+// Album cover tile — lazy-loads cover photo
+const CategoryTile = memo(({ cat, active, onPress }: {
+  cat: Category; active: boolean; onPress: () => void
+}) => {
+  const [coverUri, setCoverUri] = useState<string | null>(null)
+
+  useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      const result = await MediaLibrary.getAssetsAsync({
+        first: 1,
+        sortBy: MediaLibrary.SortBy.creationTime,
+        mediaType: MediaLibrary.MediaType.photo,
+        ...(cat.album ? { album: cat.album } : {}),
+      })
+      if (!mounted || result.assets.length === 0) return
+      const info = await MediaLibrary.getAssetInfoAsync(result.assets[0], { shouldDownloadFromNetwork: false })
+      if (mounted) setCoverUri(info.localUri ?? null)
+    }
+    load().catch(() => {})
+    return () => { mounted = false }
+  }, [cat.id])
+
+  return (
+    <Pressable style={styles.catTile} onPress={onPress}>
+      <View style={[styles.catThumb, active && styles.catThumbActive]}>
+        {coverUri
+          ? <Image source={{ uri: coverUri }} style={styles.catThumbImg} resizeMode="cover" />
+          : <View style={[styles.catThumbImg, styles.catThumbPlaceholder]} />
+        }
+      </View>
+      <Text
+        style={[styles.catLabel, active && styles.catLabelActive]}
+        numberOfLines={1}
+      >
+        {cat.label}
+      </Text>
+    </Pressable>
+  )
+})
+
+// Library grid item — lazy-loads local URI
 const LibraryItem = memo(({ asset, onPress }: { asset: MediaLibrary.Asset; onPress: () => void }) => {
   const [uri, setUri] = useState<string | null>(null)
 
@@ -43,6 +87,8 @@ export default function NewPost() {
   const navigation = useNavigation()
   const [tick, setTick] = useState(0)
   const [permission, requestPermission] = MediaLibrary.usePermissions()
+  const [categories, setCategories] = useState<Category[]>([{ id: 'all', label: 'All' }])
+  const [selectedId, setSelectedId] = useState('all')
   const [assets, setAssets] = useState<MediaLibrary.Asset[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -54,18 +100,35 @@ export default function NewPost() {
   }, [navigation])
 
   useEffect(() => {
-    if (permission?.granted) loadPhotos()
+    if (!permission?.granted) return
+    loadAlbums()
+    loadPhotos(undefined)
   }, [permission?.granted])
 
-  const loadPhotos = async () => {
+  const loadAlbums = async () => {
+    const albums = await MediaLibrary.getAlbumsAsync({ includeSmartAlbums: true })
+    const cats: Category[] = [{ id: 'all', label: 'All' }]
+    for (const a of albums) {
+      if (a.assetCount > 0) cats.push({ id: a.id, label: a.title, album: a })
+    }
+    setCategories(cats)
+  }
+
+  const loadPhotos = async (album: MediaLibrary.Album | undefined) => {
     setLoading(true)
     const result = await MediaLibrary.getAssetsAsync({
       mediaType: MediaLibrary.MediaType.photo,
       first: 200,
       sortBy: MediaLibrary.SortBy.creationTime,
+      ...(album ? { album } : {}),
     })
     setAssets(result.assets)
     setLoading(false)
+  }
+
+  const selectCategory = (cat: Category) => {
+    setSelectedId(cat.id)
+    loadPhotos(cat.album)
   }
 
   const photos = newPostStore
@@ -138,12 +201,30 @@ export default function NewPost() {
           </View>
         ))}
         {Array.from({ length: Math.max(0, MAX_PHOTOS - photos.length) }, (_, i) => (
-          <View key={`e${i}`} style={[styles.slotEmpty, photos.length === 0 && i === 0 && styles.slotFirstLeft]} />
+          <View key={`e${i}`} style={[styles.slotEmpty, i === 0 && styles.slotFirstLeft]} />
         ))}
       </ScrollView>
 
       {/* Library label */}
       <Text style={styles.libraryLabel}>Choose from your library</Text>
+
+      {/* Album cover row */}
+      <View style={styles.catRowWrap}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.catRow}
+      >
+        {categories.map(cat => (
+          <CategoryTile
+            key={cat.id}
+            cat={cat}
+            active={cat.id === selectedId}
+            onPress={() => selectCategory(cat)}
+          />
+        ))}
+      </ScrollView>
+      </View>
 
       {/* Library grid */}
       {loading ? (
@@ -181,13 +262,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#1e1e1e',
     borderRadius: 50,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
+    width: 100,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'transparent',
   },
   pillBtnText: {
     fontFamily: 'CormorantSC-Medium',
-    fontSize: 16,
+    fontSize: 14,
     color: '#000',
   },
   pillBtnBold: { fontFamily: 'CormorantSC-Bold' },
@@ -209,6 +292,7 @@ const styles = StyleSheet.create({
     width: SLOT_WIDTH,
     height: SLOT_HEIGHT,
     backgroundColor: '#d9d9d9',
+    overflow: 'hidden',
   },
   slotFilled: {
     width: SLOT_WIDTH,
@@ -216,8 +300,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   slotFirstLeft: {
-    borderTopLeftRadius: 5,
-    borderBottomLeftRadius: 5,
+    borderTopLeftRadius: 10,
+    borderBottomLeftRadius: 10,
   },
   slotImage: { width: SLOT_WIDTH, height: SLOT_HEIGHT },
   removeBtn: {
@@ -239,7 +323,53 @@ const styles = StyleSheet.create({
     color: '#808080',
     marginLeft: GRID_MARGIN,
     marginTop: 8,
-    marginBottom: 3,
+    marginBottom: 10,
+  },
+
+  // Album cover row
+  catRowWrap: {
+    height: THUMB + 30,
+  },
+  catRow: {
+    paddingHorizontal: GRID_MARGIN,
+    gap: 12,
+    paddingBottom: 10,
+  },
+  catTile: {
+    width: THUMB,
+    alignItems: 'center',
+  },
+  catThumb: {
+    width: THUMB,
+    height: THUMB,
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  catThumbActive: {
+    borderColor: '#1e1e1e',
+  },
+  catThumbImg: {
+    width: THUMB,
+    height: THUMB,
+    borderRadius: 8,
+  },
+  catThumbPlaceholder: {
+    backgroundColor: '#e0e0e0',
+    borderRadius: 8,
+  },
+  catLabel: {
+    fontFamily: 'GCPrometheusDemo-Regular',
+    fontSize: 11,
+    color: '#808080',
+    marginTop: 4,
+    textAlign: 'center',
+    width: THUMB,
+  },
+  catLabelActive: {
+    color: '#000',
+    fontFamily: 'GCPrometheusDemo-SemiBold',
   },
 
   gridRow: { gap: GRID_GAP },

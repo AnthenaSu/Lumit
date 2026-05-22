@@ -38,8 +38,6 @@ export default function CodeVerify() {
         </Svg>
       </Pressable>
 
-      <Text style={styles.subtitle}>Sign in to continue</Text>
-
       <Text style={styles.phoneLabel}>Phone Number</Text>
       <View style={styles.arrowPhone}><ArrowRight /></View>
       <Text style={styles.phoneValue}>{phone}</Text>

@@ -1,9 +1,11 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   View, Text, Image, ScrollView, Pressable, StyleSheet,
-  Modal, TextInput, FlatList, Dimensions, Animated, Easing,
+  Modal, TextInput, FlatList, Dimensions, Animated, Easing, Linking,
 } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useRouter, useFocusEffect } from 'expo-router'
+import { profileStore } from '../../profile-store'
+import GalleryView from '../../components/GalleryView'
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
 const GRID_GAP = 2
@@ -49,6 +51,13 @@ const FOLLOWERS_LIST: FollowUser[] = [
 
 export default function Profile() {
   const router = useRouter()
+  const [profileData, setProfileData] = useState({ ...profileStore })
+
+  useFocusEffect(useCallback(() => {
+    setProfileData({ ...profileStore })
+  }, []))
+
+  const [activeView, setActiveView] = useState<'grid' | 'gallery'>('grid')
   const [followModal, setFollowModal] = useState(false)
   const [followTab, setFollowTab] = useState<'following' | 'followers'>('following')
   const [followSearch, setFollowSearch] = useState('')
@@ -93,54 +102,73 @@ export default function Profile() {
     u.user.toLowerCase().includes(followSearch.toLowerCase())
   )
 
+  const profileHeader = (
+    <View style={styles.header}>
+      <Pressable style={styles.avatar} onPress={() => router.push('/edit-profile')}>
+        <Image
+          source={profileData.avatarUri ? { uri: profileData.avatarUri } : require('../../assets/images/profile_avatar.jpg')}
+          style={{ width: '100%', height: '100%' }}
+          resizeMode="cover"
+        />
+      </Pressable>
+      <Pressable onPress={() => router.push('/edit-profile')}>
+        <Text style={styles.name}>{profileData.name}</Text>
+      </Pressable>
+      <Text style={styles.location}>{profileData.location}</Text>
+      <View style={styles.socialRow}>
+        <Pressable onPress={() => Linking.openURL(`https://instagram.com/${profileData.instagram.replace('@', '')}`)}>
+          <Text style={styles.social}>{profileData.instagram}</Text>
+        </Pressable>
+        <Pressable onPress={() => Linking.openURL(`https://open.spotify.com/user/${profileData.spotify}`)}>
+          <Text style={styles.social}>{profileData.spotify}</Text>
+        </Pressable>
+      </View>
+      <View style={styles.btnRow}>
+        <Pressable
+          style={({ pressed }) => [styles.pillBtn, pressed && { opacity: 0.6 }]}
+          onPress={() => { setFollowTab('following'); setFollowModal(true) }}
+        >
+          <Text style={styles.pillBtnText}>Following</Text>
+        </Pressable>
+        <Pressable style={({ pressed }) => [styles.pillBtn, pressed && { opacity: 0.6 }]} onPress={() => setActiveView(activeView === 'gallery' ? 'grid' : 'gallery')}>
+          <Text style={styles.pillBtnText}>{activeView === 'gallery' ? 'View All' : 'Gallery'}</Text>
+        </Pressable>
+        <Pressable style={({ pressed }) => [styles.pillBtn, pressed && { opacity: 0.6 }]} onPress={() => router.push('/settings')}>
+          <Text style={styles.pillBtnText}>Setting</Text>
+        </Pressable>
+      </View>
+    </View>
+  )
+
   return (
     <View style={styles.page}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-
-        <View style={styles.header}>
-          <Image
-            source={require('../../assets/images/profile_avatar.jpg')}
-            style={styles.avatar}
-            resizeMode="cover"
-          />
-          <Text style={styles.name}>Ian Lin</Text>
-          <Text style={styles.location}>Sydney AUS</Text>
-          <Text style={styles.social}>Instagram{'             '}Spotify</Text>
-          <View style={styles.btnRow}>
-            <Pressable
-              style={({ pressed }) => [styles.pillBtn, pressed && { opacity: 0.6 }]}
-              onPress={() => { setFollowTab('following'); setFollowModal(true) }}
-            >
-              <Text style={styles.pillBtnText}>Following</Text>
-            </Pressable>
-            <Pressable style={({ pressed }) => [styles.pillBtn, pressed && { opacity: 0.6 }]}>
-              <Text style={styles.pillBtnText}>Gallery</Text>
-            </Pressable>
-            <Pressable style={({ pressed }) => [styles.pillBtn, pressed && { opacity: 0.6 }]}>
-              <Text style={styles.pillBtnText}>Setting</Text>
-            </Pressable>
-          </View>
+      {profileHeader}
+      {activeView === 'gallery' ? (
+        <View style={{ flex: 1, paddingBottom: 83 }}>
+          <GalleryView />
         </View>
+      ) : (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+          {GRID_ROWS.map((row, rowIdx) => (
+            <View key={rowIdx} style={styles.gridRow}>
+              {row.map((src, colIdx) => (
+                <Pressable
+                  key={colIdx}
+                  style={[styles.gridItem, colIdx < 2 && { marginRight: GRID_GAP }]}
+                  onPress={() => router.push({ pathname: '/post', params: { idx: rowIdx * 3 + colIdx } })}
+                >
+                  <Image
+                    source={src}
+                    style={{ width: CELL_WIDTH, height: CELL_HEIGHT }}
+                    resizeMode="cover"
+                  />
+                </Pressable>
+              ))}
+            </View>
+          ))}
 
-        {GRID_ROWS.map((row, rowIdx) => (
-          <View key={rowIdx} style={styles.gridRow}>
-            {row.map((src, colIdx) => (
-              <Pressable
-                key={colIdx}
-                style={[styles.gridItem, colIdx < 2 && { marginRight: GRID_GAP }]}
-                onPress={() => router.push({ pathname: '/post', params: { idx: rowIdx * 3 + colIdx } })}
-              >
-                <Image
-                  source={src}
-                  style={{ width: CELL_WIDTH, height: CELL_HEIGHT }}
-                  resizeMode="cover"
-                />
-              </Pressable>
-            ))}
-          </View>
-        ))}
-
-      </ScrollView>
+        </ScrollView>
+      )}
 
       {/* Following / Followers modal */}
       <Modal
@@ -216,7 +244,8 @@ const styles = StyleSheet.create({
   },
   name: { fontFamily: 'GCPrometheusDemo-Medium', fontSize: 40, color: '#000', marginBottom: 2 },
   location: { fontFamily: 'CormorantSC-Medium', fontSize: 18, color: '#808080', marginBottom: 6 },
-  social: { fontFamily: 'CormorantSC-Medium', fontSize: 18, color: '#000', marginBottom: 14 },
+  socialRow: { flexDirection: 'row', gap: 28, marginBottom: 14 },
+  social: { fontFamily: 'CormorantSC-Medium', fontSize: 18, color: '#000' },
   btnRow: { flexDirection: 'row', gap: 24, marginHorizontal: -10 },
   pillBtn: {
     flex: 1,

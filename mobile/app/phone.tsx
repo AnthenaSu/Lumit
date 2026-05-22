@@ -22,7 +22,6 @@ export default function PhoneInput() {
         </Svg>
       </Pressable>
 
-      <Text style={styles.subtitle}>Sign in to continue</Text>
       <Text style={styles.fieldLabel}>Phone Number</Text>
 
       <View style={styles.arrowWrap}>

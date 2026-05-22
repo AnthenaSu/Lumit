@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import {
   View, Text, Image, Pressable, StyleSheet, Dimensions,
   FlatList, Modal, TextInput, KeyboardAvoidingView, Platform, Animated,
+  ScrollView,
 } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
 import Svg, { Path, Circle, Line } from 'react-native-svg'
@@ -12,21 +13,15 @@ const HEADER_HEIGHT = 60
 const ITEM_HEIGHT = HEADER_HEIGHT + PHOTO_HEIGHT + 8
 
 type Comment = { id: number; user: string; text: string }
-type Post = { id: number; user: string; location: string; time: string; photo: number; comments: Comment[] }
+type Post = { id: number; user: string; location: string; time: string; photos: number[]; comments: Comment[] }
 
 const INITIAL_POSTS: Post[] = [
-  { id: 0,  user: 'Ian Lin', location: 'Sydney',    time: '1 hour ago',   photo: require('../assets/images/profile1.jpg'),  comments: [] },
-  { id: 1,  user: 'Ian Lin', location: 'Melbourne', time: '3 hours ago',  photo: require('../assets/images/profile2.jpg'),  comments: [] },
-  { id: 2,  user: 'Ian Lin', location: 'Sydney',    time: '5 hours ago',  photo: require('../assets/images/profile3.jpg'),  comments: [] },
-  { id: 3,  user: 'Ian Lin', location: 'Sydney',    time: '1 day ago',    photo: require('../assets/images/profile4.jpg'),  comments: [] },
-  { id: 4,  user: 'Ian Lin', location: 'Melbourne', time: '2 days ago',   photo: require('../assets/images/profile5.jpg'),  comments: [] },
-  { id: 5,  user: 'Ian Lin', location: 'Sydney',    time: '3 days ago',   photo: require('../assets/images/profile6.jpg'),  comments: [] },
-  { id: 6,  user: 'Ian Lin', location: 'Sydney',    time: '4 days ago',   photo: require('../assets/images/profile7.jpg'),  comments: [] },
-  { id: 7,  user: 'Ian Lin', location: 'Melbourne', time: '5 days ago',   photo: require('../assets/images/profile8.jpg'),  comments: [] },
-  { id: 8,  user: 'Ian Lin', location: 'Sydney',    time: '6 days ago',   photo: require('../assets/images/profile9.jpg'),  comments: [] },
-  { id: 9,  user: 'Ian Lin', location: 'Sydney',    time: '1 week ago',   photo: require('../assets/images/profile10.jpg'), comments: [] },
-  { id: 10, user: 'Ian Lin', location: 'Melbourne', time: '2 weeks ago',  photo: require('../assets/images/profile11.jpg'), comments: [] },
-  { id: 11, user: 'Ian Lin', location: 'Sydney',    time: '3 weeks ago',  photo: require('../assets/images/profile12.jpg'), comments: [] },
+  { id: 0,  user: 'Ian Lin', location: 'Sydney',    time: '1 hour ago',   photos: [require('../assets/images/profile1.jpg'), require('../assets/images/profile2.jpg'), require('../assets/images/profile3.jpg')], comments: [] },
+  { id: 1,  user: 'Ian Lin', location: 'Melbourne', time: '3 hours ago',  photos: [require('../assets/images/profile4.jpg'), require('../assets/images/profile5.jpg')], comments: [] },
+  { id: 2,  user: 'Ian Lin', location: 'Sydney',    time: '5 hours ago',  photos: [require('../assets/images/profile6.jpg')], comments: [] },
+  { id: 3,  user: 'Ian Lin', location: 'Sydney',    time: '1 day ago',    photos: [require('../assets/images/profile7.jpg'), require('../assets/images/profile8.jpg')], comments: [] },
+  { id: 4,  user: 'Ian Lin', location: 'Melbourne', time: '2 days ago',   photos: [require('../assets/images/profile9.jpg')], comments: [] },
+  { id: 5,  user: 'Ian Lin', location: 'Sydney',    time: '3 days ago',   photos: [require('../assets/images/profile10.jpg'), require('../assets/images/profile11.jpg'), require('../assets/images/profile12.jpg')], comments: [] },
 ]
 
 function IconComment() {
@@ -101,8 +96,10 @@ type CatState = { visible: boolean; x: number }
 export default function Post() {
   const { idx } = useLocalSearchParams<{ idx: string }>()
   const initialIndex = Math.min(Math.max(Number(idx) ?? 0, 0), INITIAL_POSTS.length - 1)
+  // idx from profile grid (0-11) maps to post index
 
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS)
+  const [activePhoto, setActivePhoto] = useState<Record<number, number>>({})
   const [cats, setCats] = useState<Record<number, CatState>>({})
   const [iconVisible, setIconVisible] = useState<Record<number, boolean>>({})
   const [commentOff, setCommentOff] = useState<Record<number, boolean>>({})
@@ -206,9 +203,32 @@ export default function Post() {
         {cats[item.id]?.visible && (
           <Image source={require('../assets/images/cat.png')} style={[styles.catSticker, { left: cats[item.id].x }]} />
         )}
-        <Pressable onPress={() => handlePhotoPress(item.id)} style={StyleSheet.absoluteFill}>
-          <Image source={item.photo} style={styles.photoImg} resizeMode="cover" />
-        </Pressable>
+        <ScrollView
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          scrollEventThrottle={16}
+          style={{ width, height: PHOTO_HEIGHT }}
+          onScroll={e => {
+            const page = Math.round(e.nativeEvent.contentOffset.x / width)
+            setActivePhoto(s => ({ ...s, [item.id]: page }))
+          }}
+        >
+          {item.photos.map((photo, i) => (
+            <Pressable key={i} onPress={() => handlePhotoPress(item.id)}>
+              <Image source={photo} style={styles.photoImg} resizeMode="cover" />
+            </Pressable>
+          ))}
+        </ScrollView>
+
+        {/* Pagination indicator */}
+        {item.photos.length > 1 && (
+          <View style={styles.dotsRow}>
+            {item.photos.map((_, i) => (
+              <View key={i} style={[styles.dot, i === (activePhoto[item.id] ?? 0) && styles.dotActive]} />
+            ))}
+          </View>
+        )}
 
         {iconVisible[item.id] && (
           <View style={styles.iconRow}>
@@ -331,6 +351,16 @@ const styles = StyleSheet.create({
   meta: { fontSize: 13, color: 'rgba(0,0,0,0.5)', alignSelf: 'flex-start', marginTop: 2 },
   catSticker: { position: 'absolute', top: -50, width: 48, height: 50 },
   photoImg: { width, height: PHOTO_HEIGHT },
+
+  dotsRow: {
+    position: 'absolute', bottom: 12, left: 0, right: 0,
+    flexDirection: 'row', justifyContent: 'center', gap: 5,
+  },
+  dot: {
+    width: 6, height: 6, borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+  },
+  dotActive: { backgroundColor: '#fff' },
 
   iconRow: {
     position: 'absolute', bottom: 12, right: 12,

@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Dimensions,
 } from "react-native";
+import { useRouter } from "expo-router";
 import Svg, { Path } from "react-native-svg";
 
 const lampImg = require("../../assets/images/lamp.png");
@@ -31,10 +32,15 @@ const PHOTOS = [
 ];
 
 export default function Weekly() {
+  const router = useRouter();
   const renderItem = ({ item, index }: { item: number; index: number }) => {
     const col = index % 2;
+    const postIdx = Math.floor(index / 2);
     return (
-      <Pressable style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}>
+      <Pressable
+        style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+        onPress={() => router.push({ pathname: '/post', params: { idx: String(postIdx) } })}
+      >
         <Image
           source={item}
           style={{

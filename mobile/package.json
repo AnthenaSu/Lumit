@@ -9,7 +9,6 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "babel-preset-expo": "^55.0.22",
     "expo": "~54.0.33",
     "expo-blur": "~15.0.8",
     "expo-clipboard": "~8.0.8",
@@ -30,6 +29,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
+    "babel-preset-expo": "^54.0.10",
     "typescript": "~5.9.2"
   },
   "private": true

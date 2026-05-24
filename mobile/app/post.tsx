@@ -6,6 +6,7 @@ import {
 } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
 import Svg, { Path, Circle, Line } from 'react-native-svg'
+import * as Haptics from 'expo-haptics'
 
 const { width, height } = Dimensions.get('window')
 const PHOTO_HEIGHT = width * (4 / 3)
@@ -91,7 +92,13 @@ function IconEyeOn() {
   )
 }
 
-type CatState = { visible: boolean; x: number }
+type CatAnimData = {
+  x: number
+  translateY: Animated.Value
+  scale: Animated.Value
+  rotate: Animated.Value
+  rotateInterp: Animated.AnimatedInterpolation<string>
+}
 
 export default function Post() {
   const { idx } = useLocalSearchParams<{ idx: string }>()
@@ -100,7 +107,8 @@ export default function Post() {
 
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS)
   const [activePhoto, setActivePhoto] = useState<Record<number, number>>({})
-  const [cats, setCats] = useState<Record<number, CatState>>({})
+  const catAnims = useRef<Record<number, CatAnimData>>({})
+  const [catVisible, setCatVisible] = useState<Record<number, boolean>>({})
   const [iconVisible, setIconVisible] = useState<Record<number, boolean>>({})
   const [commentOff, setCommentOff] = useState<Record<number, boolean>>({})
   const [hideCat, setHideCat] = useState<Record<number, boolean>>({})
@@ -165,15 +173,44 @@ export default function Post() {
     if (now - prev < 300) {
       clearTimeout(singleTapTimer.current[postId])
       if (!hideCat[postId]) {
-        if (cats[postId]?.visible) {
-          setCats(s => ({ ...s, [postId]: { visible: false, x: 0 } }))
+        const existing = catAnims.current[postId]
+
+        if (existing && catVisible[postId]) {
+          // Cat already there — wiggle + scale pulse
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+          Animated.sequence([
+            Animated.timing(existing.rotate, { toValue: -10, duration: 55, useNativeDriver: true }),
+            Animated.timing(existing.rotate, { toValue: 10,  duration: 75, useNativeDriver: true }),
+            Animated.timing(existing.rotate, { toValue: -6,  duration: 65, useNativeDriver: true }),
+            Animated.timing(existing.rotate, { toValue: 6,   duration: 65, useNativeDriver: true }),
+            Animated.timing(existing.rotate, { toValue: 0,   duration: 55, useNativeDriver: true }),
+          ]).start()
+          Animated.sequence([
+            Animated.spring(existing.scale, { toValue: 1.2, damping: 5, stiffness: 320, useNativeDriver: true }),
+            Animated.spring(existing.scale, { toValue: 1,   damping: 14, stiffness: 200, useNativeDriver: true }),
+          ]).start()
         } else {
+          // First appearance — spring up from below with slight tilt
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
           const nameWidth = usernameWidths.current[postId] ?? 100
           const metaWidth = metaWidths.current[postId] ?? 0
           const minX = 14 + Math.max(nameWidth, metaWidth) + 6
           const maxX = width - 48
           const x = minX + Math.random() * (maxX - minX)
-          setCats(s => ({ ...s, [postId]: { visible: true, x } }))
+
+          const translateY = new Animated.Value(90)
+          const scale = new Animated.Value(0)
+          const rotate = new Animated.Value(-10)
+          const rotateInterp = rotate.interpolate({ inputRange: [-15, 15], outputRange: ['-15deg', '15deg'] })
+
+          catAnims.current[postId] = { x, translateY, scale, rotate, rotateInterp }
+          setCatVisible(s => ({ ...s, [postId]: true }))
+
+          Animated.parallel([
+            Animated.spring(translateY, { toValue: 0,  damping: 9,  stiffness: 110, useNativeDriver: true }),
+            Animated.spring(scale,      { toValue: 1,  damping: 10, stiffness: 140, useNativeDriver: true }),
+            Animated.spring(rotate,     { toValue: 0,  damping: 11, stiffness: 140, useNativeDriver: true }),
+          ]).start()
         }
       }
     } else {
@@ -199,10 +236,7 @@ export default function Post() {
         </View>
       </View>
 
-      <View style={{ width, height: PHOTO_HEIGHT, overflow: 'visible' }}>
-        {cats[item.id]?.visible && (
-          <Image source={require('../assets/images/cat.png')} style={[styles.catSticker, { left: cats[item.id].x }]} />
-        )}
+      <View style={{ width, height: PHOTO_HEIGHT }}>
         <ScrollView
           horizontal
           pagingEnabled
@@ -247,6 +281,22 @@ export default function Post() {
           </View>
         )}
       </View>
+      {catVisible[item.id] && catAnims.current[item.id] && (() => {
+        const anim = catAnims.current[item.id]
+        return (
+          <Animated.Image
+            source={require('../assets/images/cat.png')}
+            style={[styles.catSticker, {
+              left: anim.x,
+              transform: [
+                { translateY: anim.translateY },
+                { scale: anim.scale },
+                { rotate: anim.rotateInterp },
+              ],
+            }]}
+          />
+        )
+      })()}
     </View>
   )
 
@@ -256,6 +306,7 @@ export default function Post() {
         data={posts}
         keyExtractor={item => String(item.id)}
         renderItem={renderItem}
+        extraData={catVisible}
         getItemLayout={(_, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })}
         initialScrollIndex={initialIndex}
         showsVerticalScrollIndicator={false}
@@ -289,7 +340,16 @@ export default function Post() {
             onPress={() => closeMenu(() => {
               if (menuPostId !== null) {
                 setHideCat(s => ({ ...s, [menuPostId]: !s[menuPostId] }))
-                setCats(s => ({ ...s, [menuPostId!]: { visible: false, x: 0 } }))
+                const anim = catAnims.current[menuPostId!]
+                if (anim && catVisible[menuPostId!]) {
+                  Animated.parallel([
+                    Animated.spring(anim.translateY, { toValue: 90, damping: 14, stiffness: 220, useNativeDriver: true }),
+                    Animated.spring(anim.scale,      { toValue: 0,  damping: 14, stiffness: 220, useNativeDriver: true }),
+                  ]).start(() => {
+                    setCatVisible(s => ({ ...s, [menuPostId!]: false }))
+                    delete catAnims.current[menuPostId!]
+                  })
+                }
               }
             })}
           >
@@ -349,7 +409,7 @@ const styles = StyleSheet.create({
   postHeader: { height: HEADER_HEIGHT, paddingLeft: 14, paddingRight: 12, justifyContent: 'center' },
   username: { fontFamily: 'Alyamama', fontSize: 18, lineHeight: 20, color: '#000', alignSelf: 'flex-start' },
   meta: { fontSize: 13, color: 'rgba(0,0,0,0.5)', alignSelf: 'flex-start', marginTop: 2 },
-  catSticker: { position: 'absolute', top: -50, width: 48, height: 50 },
+  catSticker: { position: 'absolute', top: HEADER_HEIGHT - 50, width: 48, height: 50, zIndex: 10 },
   photoImg: { width, height: PHOTO_HEIGHT },
 
   dotsRow: {

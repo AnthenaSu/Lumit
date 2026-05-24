@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import {
   View,
@@ -25,6 +26,7 @@ import * as Clipboard from "expo-clipboard";
 const { width, height } = Dimensions.get("window");
 const photoWidth = width;
 const photoHeight = width * (4 / 3);
+const POST_HEADER_H = 60;
 
 type Comment = {
   id: number;
@@ -132,7 +134,13 @@ const SHARE_FRIENDS = [
 ];
 
 
-type CatState = { visible: boolean; x: number };
+type CatAnimData = {
+  x: number
+  translateY: Animated.Value
+  scale: Animated.Value
+  rotate: Animated.Value
+  rotateInterp: Animated.AnimatedInterpolation<string>
+};
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 
@@ -482,7 +490,8 @@ const nStyles = StyleSheet.create({
 export default function Main() {
   const router = useRouter();
   const pagerRef = useRef<ScrollView>(null);
-  const [cats, setCats] = useState<Record<number, CatState>>({});
+  const catAnims = useRef<Record<number, CatAnimData>>({});
+  const [catVisible, setCatVisible] = useState<Record<number, boolean>>({});
   const [iconVisible, setIconVisible] = useState<Record<number, boolean>>({});
   const lastTap = useRef<Record<number, number>>({});
   const singleTapTimer = useRef<Record<number, ReturnType<typeof setTimeout>>>(
@@ -664,15 +673,40 @@ export default function Main() {
     const prev = lastTap.current[postId] ?? 0;
     if (now - prev < 300) {
       clearTimeout(singleTapTimer.current[postId]);
-      if (cats[postId]?.visible) {
-        setCats((s) => ({ ...s, [postId]: { visible: false, x: 0 } }));
+      const existing = catAnims.current[postId];
+      if (existing && catVisible[postId]) {
+        // Cat already there — wiggle
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        Animated.sequence([
+          Animated.timing(existing.rotate, { toValue: -10, duration: 55, useNativeDriver: true }),
+          Animated.timing(existing.rotate, { toValue: 10,  duration: 75, useNativeDriver: true }),
+          Animated.timing(existing.rotate, { toValue: -6,  duration: 65, useNativeDriver: true }),
+          Animated.timing(existing.rotate, { toValue: 6,   duration: 65, useNativeDriver: true }),
+          Animated.timing(existing.rotate, { toValue: 0,   duration: 55, useNativeDriver: true }),
+        ]).start();
+        Animated.sequence([
+          Animated.spring(existing.scale, { toValue: 1.2, damping: 5,  stiffness: 320, useNativeDriver: true }),
+          Animated.spring(existing.scale, { toValue: 1,   damping: 14, stiffness: 200, useNativeDriver: true }),
+        ]).start();
       } else {
+        // First appearance — spring up from below
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         const nameWidth = usernameWidths.current[postId] ?? 100;
         const metaWidth = metaWidths.current[postId] ?? 0;
         const minX = 14 + Math.max(nameWidth, metaWidth) + 6;
         const maxX = width - 48;
         const x = minX + Math.random() * (maxX - minX);
-        setCats((s) => ({ ...s, [postId]: { visible: true, x } }));
+        const translateY = new Animated.Value(90);
+        const scale = new Animated.Value(0);
+        const rotate = new Animated.Value(-10);
+        const rotateInterp = rotate.interpolate({ inputRange: [-15, 15], outputRange: ['-15deg', '15deg'] });
+        catAnims.current[postId] = { x, translateY, scale, rotate, rotateInterp };
+        setCatVisible((s) => ({ ...s, [postId]: true }));
+        Animated.parallel([
+          Animated.spring(translateY, { toValue: 0, damping: 9,  stiffness: 110, useNativeDriver: true }),
+          Animated.spring(scale,      { toValue: 1, damping: 10, stiffness: 140, useNativeDriver: true }),
+          Animated.spring(rotate,     { toValue: 0, damping: 11, stiffness: 140, useNativeDriver: true }),
+        ]).start();
       }
     } else {
       singleTapTimer.current[postId] = setTimeout(() => {
@@ -740,15 +774,8 @@ export default function Main() {
                   style={{
                     width: photoWidth,
                     height: photoHeight,
-                    overflow: "visible",
                   }}
                 >
-                  {cats[post.id]?.visible && (
-                    <Image
-                      source={require("../../assets/images/cat.png")}
-                      style={[styles.catSticker, { left: cats[post.id].x }]}
-                    />
-                  )}
                   <Pressable
                     onPress={() => handlePhotoPress(post.id)}
                     onLongPress={() => openShare(post.id)}
@@ -770,6 +797,22 @@ export default function Main() {
                     </Pressable>
                   )}
                 </View>
+                {catVisible[post.id] && catAnims.current[post.id] && (() => {
+                  const anim = catAnims.current[post.id];
+                  return (
+                    <Animated.Image
+                      source={require("../../assets/images/cat.png")}
+                      style={[styles.catSticker, {
+                        left: anim.x,
+                        transform: [
+                          { translateY: anim.translateY },
+                          { scale: anim.scale },
+                          { rotate: anim.rotateInterp },
+                        ],
+                      }]}
+                    />
+                  );
+                })()}
               </View>
             ))}
           </ScrollView>
@@ -997,12 +1040,12 @@ const styles = StyleSheet.create({
   },
   post: { paddingBottom: 8, marginBottom: 12 },
   postHeader: {
-    paddingTop: 4,
-    paddingBottom: 4,
+    height: POST_HEADER_H,
     paddingLeft: 14,
     paddingRight: 12,
+    justifyContent: "center",
   },
-  catSticker: { position: "absolute", top: -50, width: 48, height: 50 },
+  catSticker: { position: "absolute", top: POST_HEADER_H - 50, width: 48, height: 50, zIndex: 10 },
   username: {
     fontFamily: "Alyamama",
     fontSize: 18,

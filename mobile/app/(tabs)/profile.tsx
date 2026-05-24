@@ -1,39 +1,38 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   View, Text, Image, ScrollView, Pressable, StyleSheet,
-  Modal, TextInput, FlatList, Dimensions, Animated, Easing, Linking,
+  Modal, TextInput, FlatList, Dimensions, Animated, Easing,
 } from 'react-native'
-import { useRouter, useFocusEffect } from 'expo-router'
-import { profileStore } from '../../profile-store'
-import GalleryView from '../../components/GalleryView'
+import { useFocusEffect } from 'expo-router'
+import { sharedPosts } from '../post-store'
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
+const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const GRID_GAP = 2
-const CELL_WIDTH = (SCREEN_WIDTH - GRID_GAP * 2) / 3
-const CELL_HEIGHT = CELL_WIDTH * (160 / 120)
 
-const GRID_ROWS = [
-  [
-    require('../../assets/images/profile1.jpg'),
-    require('../../assets/images/profile2.jpg'),
-    require('../../assets/images/profile3.jpg'),
-  ],
-  [
-    require('../../assets/images/profile4.jpg'),
-    require('../../assets/images/profile5.jpg'),
-    require('../../assets/images/profile6.jpg'),
-  ],
-  [
-    require('../../assets/images/profile7.jpg'),
-    require('../../assets/images/profile8.jpg'),
-    require('../../assets/images/profile9.jpg'),
-  ],
-  [
-    require('../../assets/images/profile10.jpg'),
-    require('../../assets/images/profile11.jpg'),
-    require('../../assets/images/profile12.jpg'),
-  ],
+const STATIC_SRCS = [
+  require('../../assets/images/profile1.jpg'),
+  require('../../assets/images/profile2.jpg'),
+  require('../../assets/images/profile3.jpg'),
+  require('../../assets/images/profile4.jpg'),
+  require('../../assets/images/profile5.jpg'),
+  require('../../assets/images/profile6.jpg'),
+  require('../../assets/images/profile7.jpg'),
+  require('../../assets/images/profile8.jpg'),
+  require('../../assets/images/profile9.jpg'),
+  require('../../assets/images/profile10.jpg'),
+  require('../../assets/images/profile11.jpg'),
+  require('../../assets/images/profile12.jpg'),
 ]
+
+type GridItem =
+  | { kind: 'dynamic'; uri: string }
+  | { kind: 'static'; src: number }
+
+function chunkGrid(items: GridItem[], n: number): GridItem[][] {
+  return Array.from({ length: Math.ceil(items.length / n) }, (_, i) =>
+    items.slice(i * n, i * n + n)
+  )
+}
 
 type FollowUser = { id: number; user: string; avatar?: number; color?: string }
 
@@ -50,15 +49,13 @@ const FOLLOWERS_LIST: FollowUser[] = [
 ]
 
 export default function Profile() {
-  const router = useRouter()
-  const [profileData, setProfileData] = useState({ ...profileStore })
-
-  useFocusEffect(useCallback(() => {
-    setProfileData({ ...profileStore })
-  }, []))
-
-  const [activeView, setActiveView] = useState<'grid' | 'gallery'>('grid')
+  const [tick, setTick] = useState(0)
   const [followModal, setFollowModal] = useState(false)
+
+  // Re-render whenever this tab comes into focus (e.g. after sharing a post)
+  useFocusEffect(useCallback(() => {
+    setTick(t => t + 1)
+  }, []))
   const [followTab, setFollowTab] = useState<'following' | 'followers'>('following')
   const [followSearch, setFollowSearch] = useState('')
   const SHEET_HEIGHT = SCREEN_HEIGHT * 0.88
@@ -102,73 +99,56 @@ export default function Profile() {
     u.user.toLowerCase().includes(followSearch.toLowerCase())
   )
 
-  const profileHeader = (
-    <View style={styles.header}>
-      <Pressable style={styles.avatar} onPress={() => router.push('/edit-profile')}>
-        <Image
-          source={profileData.avatarUri ? { uri: profileData.avatarUri } : require('../../assets/images/profile_avatar.jpg')}
-          style={{ width: '100%', height: '100%' }}
-          resizeMode="cover"
-        />
-      </Pressable>
-      <Pressable onPress={() => router.push('/edit-profile')}>
-        <Text style={styles.name}>{profileData.name}</Text>
-      </Pressable>
-      <Text style={styles.location}>{profileData.location}</Text>
-      <View style={styles.socialRow}>
-        <Pressable onPress={() => Linking.openURL(`https://instagram.com/${profileData.instagram.replace('@', '')}`)}>
-          <Text style={styles.social}>{profileData.instagram}</Text>
-        </Pressable>
-        <Pressable onPress={() => Linking.openURL(`https://open.spotify.com/user/${profileData.spotify}`)}>
-          <Text style={styles.social}>{profileData.spotify}</Text>
-        </Pressable>
-      </View>
-      <View style={styles.btnRow}>
-        <Pressable
-          style={({ pressed }) => [styles.pillBtn, pressed && { opacity: 0.6 }]}
-          onPress={() => { setFollowTab('following'); setFollowModal(true) }}
-        >
-          <Text style={styles.pillBtnText}>Following</Text>
-        </Pressable>
-        <Pressable style={({ pressed }) => [styles.pillBtn, pressed && { opacity: 0.6 }]} onPress={() => setActiveView(activeView === 'gallery' ? 'grid' : 'gallery')}>
-          <Text style={styles.pillBtnText}>{activeView === 'gallery' ? 'View All' : 'Gallery'}</Text>
-        </Pressable>
-        <Pressable style={({ pressed }) => [styles.pillBtn, pressed && { opacity: 0.6 }]} onPress={() => router.push('/settings')}>
-          <Text style={styles.pillBtnText}>Setting</Text>
-        </Pressable>
-      </View>
-    </View>
-  )
+  // tick changes on focus → forces fresh read of sharedPosts
+  const gridItems: GridItem[] = tick >= 0 ? [
+    ...sharedPosts.map(p => ({ kind: 'dynamic' as const, uri: p.photos[0].uri })),
+    ...STATIC_SRCS.map(src => ({ kind: 'static' as const, src })),
+  ] : []
+  const gridRows = chunkGrid(gridItems, 3)
 
   return (
     <View style={styles.page}>
-      {profileHeader}
-      {activeView === 'gallery' ? (
-        <View style={{ flex: 1, paddingBottom: 83 }}>
-          <GalleryView />
-        </View>
-      ) : (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-          {GRID_ROWS.map((row, rowIdx) => (
-            <View key={rowIdx} style={styles.gridRow}>
-              {row.map((src, colIdx) => (
-                <Pressable
-                  key={colIdx}
-                  style={[styles.gridItem, colIdx < 2 && { marginRight: GRID_GAP }]}
-                  onPress={() => router.push({ pathname: '/post', params: { idx: rowIdx * 3 + colIdx } })}
-                >
-                  <Image
-                    source={src}
-                    style={{ width: CELL_WIDTH, height: CELL_HEIGHT }}
-                    resizeMode="cover"
-                  />
-                </Pressable>
-              ))}
-            </View>
-          ))}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
 
-        </ScrollView>
-      )}
+        <View style={styles.header}>
+          <Image
+            source={require('../../assets/images/profile_avatar.jpg')}
+            style={styles.avatar}
+            resizeMode="cover"
+          />
+          <Text style={styles.name}>Ian Lin</Text>
+          <Text style={styles.location}>Sydney AUS</Text>
+          <Text style={styles.social}>Instagram{'             '}Spotify</Text>
+          <View style={styles.btnRow}>
+            <Pressable
+              style={({ pressed }) => [styles.pillBtn, pressed && { opacity: 0.6 }]}
+              onPress={() => { setFollowTab('following'); setFollowModal(true) }}
+            >
+              <Text style={styles.pillBtnText}>Following</Text>
+            </Pressable>
+            <Pressable style={({ pressed }) => [styles.pillBtn, pressed && { opacity: 0.6 }]}>
+              <Text style={styles.pillBtnText}>Gallery</Text>
+            </Pressable>
+            <Pressable style={({ pressed }) => [styles.pillBtn, pressed && { opacity: 0.6 }]}>
+              <Text style={styles.pillBtnText}>Setting</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {gridRows.map((row, rowIdx) => (
+          <View key={rowIdx} style={styles.gridRow}>
+            {row.map((item, colIdx) => (
+              <Image
+                key={colIdx}
+                source={item.kind === 'dynamic' ? { uri: item.uri } : item.src}
+                style={[styles.gridItem, colIdx < 2 && { marginRight: GRID_GAP }]}
+                resizeMode="cover"
+              />
+            ))}
+          </View>
+        ))}
+
+      </ScrollView>
 
       {/* Following / Followers modal */}
       <Modal
@@ -244,8 +224,7 @@ const styles = StyleSheet.create({
   },
   name: { fontFamily: 'GCPrometheusDemo-Medium', fontSize: 40, color: '#000', marginBottom: 2 },
   location: { fontFamily: 'CormorantSC-Medium', fontSize: 18, color: '#808080', marginBottom: 6 },
-  socialRow: { flexDirection: 'row', gap: 28, marginBottom: 14 },
-  social: { fontFamily: 'CormorantSC-Medium', fontSize: 18, color: '#000' },
+  social: { fontFamily: 'CormorantSC-Medium', fontSize: 18, color: '#000', marginBottom: 14 },
   btnRow: { flexDirection: 'row', gap: 24, marginHorizontal: -10 },
   pillBtn: {
     flex: 1,
@@ -258,7 +237,7 @@ const styles = StyleSheet.create({
   },
   pillBtnText: { fontFamily: 'CormorantSC-SemiBold', fontSize: 18, color: '#000' },
   gridRow: { flexDirection: 'row', marginBottom: GRID_GAP },
-  gridItem: { width: CELL_WIDTH, height: CELL_HEIGHT, backgroundColor: '#f5f5f5' },
+  gridItem: { flex: 1, aspectRatio: 120 / 160 },
 
   // ── Modal ──
   modalBackdrop: {

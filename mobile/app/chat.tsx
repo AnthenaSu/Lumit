@@ -2,10 +2,9 @@ import { useState, useRef } from 'react'
 import {
   View, Text, FlatList, Image, Pressable, TextInput,
   StyleSheet, Dimensions, KeyboardAvoidingView, Platform,
-  Modal, Animated,
 } from 'react-native'
 import { useRouter, useLocalSearchParams } from 'expo-router'
-import Svg, { Path, Circle, Line } from 'react-native-svg'
+import Svg, { Path, Circle } from 'react-native-svg'
 
 const { width } = Dimensions.get('window')
 
@@ -57,34 +56,6 @@ function IconMore() {
   )
 }
 
-function IconTrash() {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="#ff3b30" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M10 11v6M14 11v6" stroke="#ff3b30" strokeWidth={1.6} strokeLinecap="round" />
-    </Svg>
-  )
-}
-
-function IconMute() {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="#fff" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="#fff" strokeWidth={1.6} strokeLinecap="round" />
-      <Line x1="1" y1="1" x2="23" y2="23" stroke="#fff" strokeWidth={1.6} strokeLinecap="round" />
-    </Svg>
-  )
-}
-
-function IconSearchIcon() {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Circle cx={11} cy={11} r={8} stroke="#fff" strokeWidth={1.6} />
-      <Path d="M21 21l-4.35-4.35" stroke="#fff" strokeWidth={1.6} strokeLinecap="round" />
-    </Svg>
-  )
-}
-
 function IconPhoto() {
   return (
     <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
@@ -111,22 +82,7 @@ export default function Chat() {
   })
 
   const [input, setInput] = useState('')
-  const [muted, setMuted] = useState(false)
-  const [menuVisible, setMenuVisible] = useState(false)
-  const menuAnim = useRef(new Animated.Value(0)).current
   const listRef = useRef<FlatList>(null)
-
-  const openMenu = () => {
-    setMenuVisible(true)
-    Animated.spring(menuAnim, { toValue: 1, damping: 20, stiffness: 300, useNativeDriver: true }).start()
-  }
-
-  const closeMenu = (cb?: () => void) => {
-    Animated.timing(menuAnim, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => {
-      setMenuVisible(false)
-      cb?.()
-    })
-  }
 
   const send = () => {
     if (!input.trim()) return
@@ -180,7 +136,7 @@ export default function Chat() {
         </Pressable>
         <Avatar user={user} />
         <Text style={styles.username}>{user}</Text>
-        <Pressable style={styles.moreBtn} onPress={openMenu}>
+        <Pressable style={styles.moreBtn}>
           <IconMore />
         </Pressable>
       </View>
@@ -209,30 +165,6 @@ export default function Chat() {
           <IconPhoto />
         </Pressable>
       </View>
-      <Modal visible={menuVisible} transparent animationType="none" onRequestClose={() => closeMenu()}>
-        <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => closeMenu()} />
-          <Animated.View style={[styles.menuCard, {
-            opacity: menuAnim,
-            transform: [{ scale: menuAnim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) }],
-          }]}>
-            <Pressable style={styles.menuRow} onPress={() => closeMenu(() => setMuted(m => !m))}>
-              <Text style={styles.menuText}>{muted ? 'Unmute' : 'Mute'}</Text>
-              <IconMute />
-            </Pressable>
-            <View style={styles.menuDivider} />
-            <Pressable style={styles.menuRow} onPress={() => closeMenu()}>
-              <Text style={styles.menuText}>Search</Text>
-              <IconSearchIcon />
-            </Pressable>
-            <View style={styles.menuDivider} />
-            <Pressable style={styles.menuRow} onPress={() => closeMenu(() => router.back())}>
-              <Text style={[styles.menuText, { color: '#ff3b30' }]}>Delete Chat</Text>
-              <IconTrash />
-            </Pressable>
-          </Animated.View>
-        </View>
-      </Modal>
     </KeyboardAvoidingView>
   )
 }
@@ -289,24 +221,6 @@ const styles = StyleSheet.create({
     color: '#333',
   },
 
-  menuCard: {
-    position: 'absolute',
-    top: 100,
-    right: 16,
-    width: 220,
-    backgroundColor: 'rgba(30,30,32,0.96)',
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
-  menuRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 15,
-  },
-  menuText: { fontFamily: 'GCPrometheusDemo-Regular', fontSize: 17, color: '#fff' },
-  menuDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.15)' },
   inputBar: {
     flexDirection: 'row',
     alignItems: 'center',

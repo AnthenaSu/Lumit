@@ -1,11 +1,15 @@
-import { useState, useEffect, useCallback, memo } from 'react'
+import { useState, useEffect, useCallback, memo, useRef } from 'react'
 import {
   View, Text, Image, Pressable, FlatList, ScrollView,
-  StyleSheet, Dimensions, ActivityIndicator,
+  StyleSheet, Dimensions, ActivityIndicator, Animated, Alert,
 } from 'react-native'
 import { useRouter, useNavigation } from 'expo-router'
 import * as MediaLibrary from 'expo-media-library'
-import { newPostStore } from '../new-post-store'
+import * as Haptics from 'expo-haptics'
+import Svg, { Path } from 'react-native-svg'
+import { newPostStore } from './new-post-store'
+import { saveDraft } from './draft-store'
+import { publishPost } from './post-store'
 
 const { width } = Dimensions.get('window')
 const GRID_MARGIN = 30
@@ -17,9 +21,19 @@ const ITEM_HEIGHT = Math.floor(ITEM_WIDTH * 140 / 112)
 const MAX_PHOTOS = 10
 const THUMB = 72
 
+function IconTrash() {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Path d="M3 6h18" stroke="#fff" strokeWidth={2} strokeLinecap="round" />
+      <Path d="M8 6V4h8v2" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M19 6l-1 14H6L5 6" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  )
+}
+
 type Category = { id: string; label: string; album?: MediaLibrary.Album }
 
-// Album cover tile — lazy-loads cover photo
+// Album cover tile
 const CategoryTile = memo(({ cat, active, onPress }: {
   cat: Category; active: boolean; onPress: () => void
 }) => {
@@ -50,19 +64,22 @@ const CategoryTile = memo(({ cat, active, onPress }: {
           : <View style={[styles.catThumbImg, styles.catThumbPlaceholder]} />
         }
       </View>
-      <Text
-        style={[styles.catLabel, active && styles.catLabelActive]}
-        numberOfLines={1}
-      >
+      <Text style={[styles.catLabel, active && styles.catLabelActive]} numberOfLines={1}>
         {cat.label}
       </Text>
     </Pressable>
   )
 })
 
-// Library grid item — lazy-loads local URI
-const LibraryItem = memo(({ asset, onPress }: { asset: MediaLibrary.Asset; onPress: () => void }) => {
+// Library grid item — selection state + haptic + scale animation
+const LibraryItem = memo(({ asset, onPress, isSelected, selectionIndex }: {
+  asset: MediaLibrary.Asset
+  onPress: () => void
+  isSelected: boolean
+  selectionIndex?: number
+}) => {
   const [uri, setUri] = useState<string | null>(null)
+  const scaleAnim = useRef(new Animated.Value(1)).current
 
   useEffect(() => {
     let active = true
@@ -72,13 +89,32 @@ const LibraryItem = memo(({ asset, onPress }: { asset: MediaLibrary.Asset; onPre
     return () => { active = false }
   }, [asset.id])
 
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    Animated.sequence([
+      Animated.spring(scaleAnim, { toValue: 0.91, useNativeDriver: true, speed: 60, bounciness: 0 }),
+      Animated.spring(scaleAnim, { toValue: 1,    useNativeDriver: true, speed: 25, bounciness: 5 }),
+    ]).start()
+    onPress()
+  }
+
   return (
-    <Pressable style={styles.libraryItem} onPress={onPress}>
-      {uri
-        ? <Image source={{ uri }} style={styles.libraryImage} resizeMode="cover" />
-        : <View style={[styles.libraryImage, styles.libraryPlaceholder]} />
-      }
-    </Pressable>
+    <Animated.View style={[styles.libraryItem, { transform: [{ scale: scaleAnim }] }]}>
+      <Pressable style={{ flex: 1 }} onPress={handlePress}>
+        {uri
+          ? <Image source={{ uri }} style={styles.libraryImage} resizeMode="cover" />
+          : <View style={[styles.libraryImage, styles.libraryPlaceholder]} />
+        }
+      </Pressable>
+      {isSelected && (
+        <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+          <View style={styles.selectedOverlay} />
+          <View style={styles.selectionBadge}>
+            <Text style={styles.selectionBadgeText}>{selectionIndex}</Text>
+          </View>
+        </View>
+      )}
+    </Animated.View>
   )
 })
 
@@ -91,6 +127,10 @@ export default function NewPost() {
   const [selectedId, setSelectedId] = useState('all')
   const [assets, setAssets] = useState<MediaLibrary.Asset[]>([])
   const [loading, setLoading] = useState(false)
+
+  // Long-press trash on top slots
+  const [longPressedSlot, setLongPressedSlot] = useState<number | null>(null)
+  const slotMenuAnim = useRef(new Animated.Value(0)).current
 
   useEffect(() => { newPostStore.splice(0) }, [])
 
@@ -133,11 +173,25 @@ export default function NewPost() {
 
   const photos = newPostStore
 
+  const selectedIds = new Map(
+    photos.map((p, i) => [p.assetId ?? '', i + 1] as [string, number])
+  )
+
   const addPhoto = useCallback(async (asset: MediaLibrary.Asset) => {
+    const existingIdx = photos.findIndex(p => p.assetId === asset.id)
+    if (existingIdx !== -1) {
+      photos.splice(existingIdx, 1)
+      setTick(t => t + 1)
+      return
+    }
     if (photos.length >= MAX_PHOTOS) return
     const info = await MediaLibrary.getAssetInfoAsync(asset, { shouldDownloadFromNetwork: false })
     const uri = info.localUri ?? asset.uri
-    photos.push({ uri, caption: '' })
+    const exif = info.exif as any
+    const lat = exif?.GPSLatitude
+    const lon = exif?.GPSLongitude
+    const location = lat != null && lon != null ? { latitude: Number(lat), longitude: Number(lon) } : undefined
+    photos.push({ uri, assetId: asset.id, caption: '', location })
     setTick(t => t + 1)
   }, [])
 
@@ -146,7 +200,57 @@ export default function NewPost() {
     setTick(t => t + 1)
   }
 
-  const handleCancel = () => { photos.splice(0); router.back() }
+  const openSlotMenu = (i: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    setLongPressedSlot(i)
+    slotMenuAnim.setValue(0)
+    Animated.spring(slotMenuAnim, { toValue: 1, useNativeDriver: true, tension: 200, friction: 18 }).start()
+  }
+
+  const closeSlotMenu = () => {
+    Animated.timing(slotMenuAnim, { toValue: 0, duration: 150, useNativeDriver: true })
+      .start(() => setLongPressedSlot(null))
+  }
+
+  const removeSelectedPhoto = () => {
+    if (longPressedSlot === null) return
+    const idx = longPressedSlot
+    Animated.timing(slotMenuAnim, { toValue: 0, duration: 120, useNativeDriver: true }).start(() => {
+      setLongPressedSlot(null)
+      removePhoto(idx)
+    })
+  }
+
+  const handleShare = () => {
+    if (photos.length === 0) return
+    publishPost([...photos])
+    photos.splice(0)
+    router.back()
+  }
+
+  const handleCancel = () => {
+    if (photos.length === 0) {
+      router.back()
+      return
+    }
+    Alert.alert(
+      'Save Draft?',
+      'Save your selected photos as a draft to continue later.',
+      [
+        {
+          text: 'Save Draft',
+          onPress: () => { saveDraft([...photos]); photos.splice(0); router.back() },
+        },
+        {
+          text: 'Discard',
+          style: 'destructive',
+          onPress: () => { photos.splice(0); router.back() },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    )
+  }
+  const canShare = photos.length > 0
 
   if (!permission) return <View style={styles.page} />
 
@@ -171,13 +275,24 @@ export default function NewPost() {
 
   return (
     <View style={styles.page}>
+      {/* Dismiss slot menu on outside tap */}
+      {longPressedSlot !== null && (
+        <Pressable style={StyleSheet.absoluteFill} onPress={closeSlotMenu} />
+      )}
+
       {/* Header */}
       <View style={styles.header}>
         <Pressable style={styles.pillBtn} onPress={handleCancel}>
           <Text style={styles.pillBtnText}>Cancel</Text>
         </Pressable>
-        <Pressable style={styles.pillBtn}>
-          <Text style={[styles.pillBtnText, styles.pillBtnBold]}>Share</Text>
+        <Pressable
+          style={[styles.pillBtn, !canShare && styles.pillBtnDisabled]}
+          disabled={!canShare}
+          onPress={handleShare}
+        >
+          <Text style={[styles.pillBtnText, styles.pillBtnBold, !canShare && styles.pillBtnTextDisabled]}>
+            Share
+          </Text>
         </Pressable>
       </View>
 
@@ -191,13 +306,29 @@ export default function NewPost() {
           <View key={i} style={[styles.slotFilled, i === 0 && styles.slotFirstLeft]}>
             <Pressable
               style={StyleSheet.absoluteFill}
-              onPress={() => router.push({ pathname: '/new-post-individual', params: { index: String(i) } })}
+              onPress={() => {
+                if (longPressedSlot !== null) { closeSlotMenu(); return }
+                router.push({ pathname: '/new-post-individual', params: { index: String(i) } })
+              }}
+              onLongPress={() => openSlotMenu(i)}
+              delayLongPress={350}
             >
               <Image source={{ uri: photo.uri }} style={styles.slotImage} resizeMode="cover" />
             </Pressable>
-            <Pressable style={styles.removeBtn} onPress={() => removePhoto(i)} hitSlop={6}>
-              <Text style={styles.removeBtnText}>×</Text>
-            </Pressable>
+            {/* Long-press trash overlay */}
+            {longPressedSlot === i && (
+              <Animated.View
+                style={[styles.slotTrashOverlay, {
+                  opacity: slotMenuAnim,
+                  transform: [{ scale: slotMenuAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }],
+                }]}
+                pointerEvents="box-none"
+              >
+                <Pressable style={styles.slotTrashBtn} onPress={removeSelectedPhoto}>
+                  <IconTrash />
+                </Pressable>
+              </Animated.View>
+            )}
           </View>
         ))}
         {Array.from({ length: Math.max(0, MAX_PHOTOS - photos.length) }, (_, i) => (
@@ -210,20 +341,20 @@ export default function NewPost() {
 
       {/* Album cover row */}
       <View style={styles.catRowWrap}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.catRow}
-      >
-        {categories.map(cat => (
-          <CategoryTile
-            key={cat.id}
-            cat={cat}
-            active={cat.id === selectedId}
-            onPress={() => selectCategory(cat)}
-          />
-        ))}
-      </ScrollView>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.catRow}
+        >
+          {categories.map(cat => (
+            <CategoryTile
+              key={cat.id}
+              cat={cat}
+              active={cat.id === selectedId}
+              onPress={() => selectCategory(cat)}
+            />
+          ))}
+        </ScrollView>
       </View>
 
       {/* Library grid */}
@@ -238,9 +369,18 @@ export default function NewPost() {
           columnWrapperStyle={styles.gridRow}
           initialNumToRender={24}
           windowSize={5}
-          renderItem={({ item }) => (
-            <LibraryItem asset={item} onPress={() => addPhoto(item)} />
-          )}
+          extraData={tick}
+          renderItem={({ item }) => {
+            const selIdx = selectedIds.get(item.id)
+            return (
+              <LibraryItem
+                asset={item}
+                onPress={() => addPhoto(item)}
+                isSelected={selIdx !== undefined}
+                selectionIndex={selIdx}
+              />
+            )
+          }}
         />
       )}
     </View>
@@ -268,11 +408,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'transparent',
   },
+  pillBtnDisabled: { borderColor: '#ccc' },
   pillBtnText: {
     fontFamily: 'CormorantSC-Medium',
     fontSize: 14,
     color: '#000',
   },
+  pillBtnTextDisabled: { color: '#ccc' },
   pillBtnBold: { fontFamily: 'CormorantSC-Bold' },
   pillBtnSolid: {
     borderRadius: 50,
@@ -304,18 +446,24 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 10,
   },
   slotImage: { width: SLOT_WIDTH, height: SLOT_HEIGHT },
-  removeBtn: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+
+  // Long-press trash
+  slotTrashOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  removeBtnText: { color: '#fff', fontSize: 13, lineHeight: 18 },
+  slotTrashBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   libraryLabel: {
     fontFamily: 'GCPrometheusDemo-Regular',
@@ -326,19 +474,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
-  // Album cover row
-  catRowWrap: {
-    height: THUMB + 30,
-  },
+  catRowWrap: { height: THUMB + 30 },
   catRow: {
     paddingHorizontal: GRID_MARGIN,
     gap: 12,
     paddingBottom: 10,
   },
-  catTile: {
-    width: THUMB,
-    alignItems: 'center',
-  },
+  catTile: { width: THUMB, alignItems: 'center' },
   catThumb: {
     width: THUMB,
     height: THUMB,
@@ -347,18 +489,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
   },
-  catThumbActive: {
-    borderColor: '#1e1e1e',
-  },
-  catThumbImg: {
-    width: THUMB,
-    height: THUMB,
-    borderRadius: 8,
-  },
-  catThumbPlaceholder: {
-    backgroundColor: '#e0e0e0',
-    borderRadius: 8,
-  },
+  catThumbActive: { borderColor: '#1e1e1e' },
+  catThumbImg: { width: THUMB, height: THUMB, borderRadius: 8 },
+  catThumbPlaceholder: { backgroundColor: '#e0e0e0', borderRadius: 8 },
   catLabel: {
     fontFamily: 'GCPrometheusDemo-Regular',
     fontSize: 11,
@@ -367,15 +500,34 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     width: THUMB,
   },
-  catLabelActive: {
-    color: '#000',
-    fontFamily: 'GCPrometheusDemo-SemiBold',
-  },
+  catLabelActive: { color: '#000', fontFamily: 'GCPrometheusDemo-SemiBold' },
 
   gridRow: { gap: GRID_GAP },
   libraryItem: { width: ITEM_WIDTH, height: ITEM_HEIGHT, marginBottom: GRID_GAP },
   libraryImage: { width: ITEM_WIDTH, height: ITEM_HEIGHT },
   libraryPlaceholder: { backgroundColor: '#e0e0e0' },
+
+  selectedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.38)',
+  },
+  selectionBadge: {
+    position: 'absolute',
+    top: 7,
+    right: 7,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectionBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#000',
+    lineHeight: 14,
+  },
 
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   permissionBox: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, gap: 20 },

@@ -38,6 +38,10 @@ export default function RootLayout() {
         <Stack.Screen name="search-history" options={{ animation: 'fade' }} />
         <Stack.Screen name="new-post" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="new-post-individual" options={{ presentation: 'transparentModal', animation: 'none' }} />
+        <Stack.Screen name="post" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="edit-profile" options={{ presentation: 'modal', animation: 'slide_from_bottom', animationDuration: 200 }} />
+        <Stack.Screen name="settings" options={{ presentation: 'modal', animation: 'slide_from_bottom', animationDuration: 200 }} />
+        <Stack.Screen name="gallery" options={{ animation: 'slide_from_right' }} />
       </Stack>
     </>
   )

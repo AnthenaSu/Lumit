@@ -82,12 +82,12 @@ export default function SearchHistory() {
     })
 
   const availablePeople   = RECENT_PEOPLE_DATA.filter(p => !removedPeople.has(p.id))
-  const displayedPeople   = showMorePeople ? availablePeople : availablePeople.slice(0, 3)
-  const hiddenPeopleCount = Math.max(0, availablePeople.length - 3)
+  const displayedPeople   = showMorePeople ? availablePeople : availablePeople.slice(0, 5)
+  const hiddenPeopleCount = Math.max(0, availablePeople.length - 5)
 
   const availableItems   = RECENT_ITEMS_DATA.filter(i => !removedItems.has(i.id))
-  const displayedItems   = showMoreItems ? availableItems : availableItems.slice(0, 3)
-  const hiddenItemsCount = Math.max(0, availableItems.length - 3)
+  const displayedItems   = showMoreItems ? availableItems : availableItems.slice(0, 5)
+  const hiddenItemsCount = Math.max(0, availableItems.length - 5)
 
   const filteredUsers = USERS_DATA.filter(u =>
     u.username.toLowerCase().includes(query.toLowerCase())
@@ -102,7 +102,7 @@ export default function SearchHistory() {
           <TextInput
             ref={inputRef}
             style={styles.searchInput}
-            placeholder="search users, items ..."
+            placeholder="Search users, items ..."
             placeholderTextColor="#595959"
             value={query}
             onChangeText={setQuery}
@@ -232,54 +232,38 @@ const styles = StyleSheet.create({
   },
   searchInput: { fontFamily: 'GCPrometheusDemo-Regular', fontSize: 16, color: '#000' },
 
-  historyContent: { paddingHorizontal: GRID_MARGIN, paddingTop: 8, paddingBottom: 60 },
+  historyContent: { paddingTop: 8, paddingBottom: 60 },
 
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  },
+  card: { marginBottom: 24 },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 6,
+    paddingHorizontal: GRID_MARGIN,
+    paddingBottom: 4,
   },
-  cardLabel: { fontFamily: 'GCPrometheusDemo-Regular', fontSize: 11, color: '#888', letterSpacing: 0.8 },
-  clearText: { fontFamily: 'GCPrometheusDemo-Regular', fontSize: 13, color: '#333' },
+  cardLabel: { fontFamily: 'GCPrometheusDemo-SemiBold', fontSize: 13, color: '#000', letterSpacing: 1 },
+  clearText: { fontFamily: 'GCPrometheusDemo-SemiBold', fontSize: 15, color: '#000' },
 
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 58,
-    paddingHorizontal: 14,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#e8e8e8',
+    height: 54,
+    paddingHorizontal: GRID_MARGIN,
   },
-  rowLast: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#e8e8e8', marginBottom: 4 },
-  avatar: { width: 40, height: 40, borderRadius: 15, marginRight: 12 },
+  rowLast: {},
+  avatar: { width: 45, height: 45, borderRadius: 15, marginRight: 14 },
   rowInfo: { flex: 1 },
-  rowName: { fontFamily: 'PublicSans-SemiBold', fontSize: 14, color: '#000', marginBottom: 1 },
-  rowSub: { fontFamily: 'PublicSans-Regular', fontSize: 12, color: '#808080' },
+  rowName: { fontFamily: 'PublicSans-SemiBold', fontSize: 15, color: '#000', marginBottom: 2 },
+  rowSub: { fontFamily: 'PublicSans-Regular', fontSize: 13, color: '#000' },
   removeBtn: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'rgba(217,217,217,0.7)',
     justifyContent: 'center',
     alignItems: 'center',
-    opacity: 0.5,
+    padding: 6,
   },
-  removeBtnText: { fontFamily: 'GCPrometheusDemo-Regular', fontSize: 12, color: '#000', lineHeight: 16 },
+  removeBtnText: { fontFamily: 'GCPrometheusDemo-Regular', fontSize: 16, color: '#bbb', lineHeight: 18 },
   showMoreRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10 },
-  showMoreText: { fontFamily: 'GCPrometheusDemo-Regular', fontSize: 13, color: '#333' },
+  showMoreText: { fontFamily: 'GCPrometheusDemo-Regular', fontSize: 13, color: '#000' },
   chevronFlipped: { transform: [{ rotate: '180deg' }] },
 
   resultsContent: { paddingHorizontal: GRID_MARGIN, paddingTop: 8, paddingBottom: 40 },
